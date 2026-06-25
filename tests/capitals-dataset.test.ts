@@ -281,6 +281,12 @@ describe("AC12: countries with multiple capitals", () => {
     expect(my[0].name).toBe("Kuala Lumpur");
   });
 
+  it("Bolivia uses La Paz (executive capital, not Sucre)", () => {
+    const bo = capitals.filter((c) => c.country === "Bolivia");
+    expect(bo).toHaveLength(1);
+    expect(bo[0].name).toBe("La Paz");
+  });
+
   it("each country appears exactly once", () => {
     const countryCounts = new Map<string, number>();
     for (const c of capitals) {
@@ -337,6 +343,10 @@ describe("Edge case: excluded entities", () => {
 
   it("does not include Western Sahara", () => {
     expect(capitals.find((c) => c.country === "Western Sahara")).toBeUndefined();
+  });
+
+  it("does not include Vatican City (UN permanent observer, not member state)", () => {
+    expect(capitals.find((c) => c.country === "Vatican City")).toBeUndefined();
   });
 });
 

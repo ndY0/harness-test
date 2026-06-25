@@ -164,10 +164,10 @@
       "region": "Asia"
     },
     {
-      "name": "Sucre",
+      "name": "La Paz",
       "country": "Bolivia",
-      "lat": -19.04,
-      "lon": -65.26,
+      "lat": -16.4897,
+      "lon": -68.1193,
       "timezone": "America/La_Paz",
       "region": "Americas"
     },
@@ -1506,14 +1506,6 @@
       "lon": 168.32,
       "timezone": "Pacific/Efate",
       "region": "Oceania"
-    },
-    {
-      "name": "Vatican City",
-      "country": "Vatican City",
-      "lat": 41.9029,
-      "lon": 12.4534,
-      "timezone": "Europe/Vatican",
-      "region": "Europe"
     },
     {
       "name": "Caracas",
