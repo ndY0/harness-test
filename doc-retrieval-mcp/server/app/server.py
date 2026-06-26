@@ -13,6 +13,8 @@ maintenance calls the Archivist makes; ordinary agents do not call them.
 """
 from mcp.server.fastmcp import FastMCP
 
+import time
+
 from .config import config
 from . import frontmatter_parser, gitres
 from .chunker import chunk_markdown
@@ -170,7 +172,28 @@ def list_active(type: str | None = None, domain: str | None = None) -> list[dict
     return store.list_active(type, domain)
 
 
+def _wait_for_qdrant(retries: int = 30, delay: float = 2.0) -> None:
+    """Poll Qdrant until it accepts connections.
+
+    `depends_on` only guarantees the Qdrant container has started, not that it is
+    ready to serve. We poll a cheap endpoint until it responds, so startup
+    ordering doesn't depend on any tooling inside the (distroless) Qdrant image.
+    """
+    last_error: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            store.client.get_collections()
+            print(f"Qdrant is ready (after {attempt} attempt(s)).", flush=True)
+            return
+        except Exception as exc:  # connection refused, etc.
+            last_error = exc
+            print(f"Waiting for Qdrant ({attempt}/{retries})…", flush=True)
+            time.sleep(delay)
+    raise RuntimeError(f"Qdrant not reachable after {retries} attempts: {last_error}")
+
+
 def main() -> None:
+    _wait_for_qdrant()
     store.ensure_collection()
     mcp.run(transport="streamable-http")
 

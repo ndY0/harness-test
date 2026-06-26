@@ -10,20 +10,17 @@ services:
       - "6334:6334"   # gRPC
     volumes:
       - qdrant_storage:/qdrant/storage
-    healthcheck:
-      # Qdrant exposes a liveness endpoint at /healthz
-      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:6333/healthz || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
+    # No healthcheck: the qdrant image is distroless (no shell/wget/curl to run a
+    # probe with). Readiness is handled app-side — the MCP server waits for
+    # Qdrant on startup (see app/server.py).
 
   doc-mcp:
     build: ./server
     container_name: doc-mcp
     restart: unless-stopped
     depends_on:
-      qdrant:
-        condition: service_healthy
+      - qdrant   # waits for the container to start; the server then polls until
+                 # Qdrant actually accepts connections before creating anything.
     ports:
       - "8000:8000"   # MCP streamable-http endpoint: http://localhost:8000/mcp
     environment:
