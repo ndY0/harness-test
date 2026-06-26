@@ -1,0 +1,44 @@
+services:
+  qdrant:
+    # Pin to a specific version for reproducibility; bump deliberately.
+    # Check https://hub.docker.com/r/qdrant/qdrant/tags for the current stable tag.
+    image: qdrant/qdrant:latest
+    container_name: doc-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST + web dashboard (http://localhost:6333/dashboard)
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    healthcheck:
+      # Qdrant exposes a liveness endpoint at /healthz
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  doc-mcp:
+    build: ./server
+    container_name: doc-mcp
+    restart: unless-stopped
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    ports:
+      - "8000:8000"   # MCP streamable-http endpoint: http://localhost:8000/mcp
+    environment:
+      QDRANT_URL: "http://qdrant:6333"
+      COLLECTION: "pipeline_docs"
+      EMBED_MODEL: "BAAI/bge-small-en-v1.5"
+      VECTOR_SIZE: "384"
+      REPO_PATH: "/repo"          # the project git repo, mounted below
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8000"
+    volumes:
+      # Mount YOUR project's git repo read-only. The server reads files and
+      # resolves historical blobs via `git cat-file`; it never writes here.
+      # Set REPO_HOST_PATH in your shell or a .env file (see .env.example).
+      - "${REPO_HOST_PATH:?set REPO_HOST_PATH to your project repo path}:/repo:ro"
+
+volumes:
+  qdrant_storage:

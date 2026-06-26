@@ -1,7 +1,7 @@
 ---
 name: "spec-writer"
 description: "this agent is responsible for writing the project specifications"
-model: sonnet
+model: haiku
 color: blue
 memory: project
 ---
