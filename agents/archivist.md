@@ -169,6 +169,26 @@ Before returning `done`, verify:
 
 ---
 
+## Jira sidecar files — exclusion rule
+
+During the repo walk to index or tombstone documents, **skip any file named
+`jira_ref.json`**.
+
+These files are machine-generated state owned by the jira-bridge MCP server.
+They are not documentation and must not be indexed into Qdrant.
+Indexing them would pollute semantic search results with raw JSON.
+
+Concretely:
+- Do **not** call `index_document` on `jira_ref.json`.
+- Do **not** call `mark_deleted` on `jira_ref.json`.
+- Do **not** include them in any document listing you produce.
+
+The Archivist has no relationship with the jira-bridge MCP server and must
+not call any of its tools.  Jira sidecar lifecycle is entirely managed by the
+Tracker and Spec Writer agents via the jira-bridge.
+
+---
+
 ## Must not do
 
 - Archive a document by age alone

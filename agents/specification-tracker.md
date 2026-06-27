@@ -50,6 +50,8 @@ Your output is `BACKLOG.md`. Nothing else.
 ## <feature name>
 - status: <see status values>
 - description: <one sentence>
+- complexity: simple          # ← ADD: simple | complex (copied from spec front-matter)
+- complexity_rationale: ""    # ← ADD: copied verbatim from spec front-matter
 - depends_on: <comma-separated feature names, or "none">
 - spec: <pending | docs/specs/<feature-slug>.md>
 - review: <pending | approved | changes_requested>
@@ -134,6 +136,39 @@ Run this pass after every single update, not just at the end of a batch.
 
 ---
 
+## Jira sync pass (optional)
+
+On every tracking pass, after updating local BACKLOG.md:
+
+1. Call `list_synced_features()` to discover Jira-linked features.
+   - If the call returns `"error": "jira_not_configured"`, skip all steps
+     below.  Log nothing about this to the human.
+
+2. For each linked feature, call `get_sync_status(feature_path)`.
+
+3. Evaluate the SyncDiff:
+
+   | Condition | Action |
+   |-----------|--------|
+   | `in_sync: true` | No action needed |
+   | `description_changed: true` | Flag the feature as NEEDS_RESPEC in BACKLOG.md; do not auto-re-spec |
+   | `status_changed: true` and `current_status == "Done"` (set by PO externally) | Confirm with Orchestrator before closing locally |
+   | `has_pending_clarifications: true` | Ensure feature is PARKED in BACKLOG.md |
+
+4. Call `transition_ticket` to keep Jira status aligned with local BACKLOG.md
+   status, not the other way around.  Local state leads; Jira follows.
+
+   | Local BACKLOG status | Jira transition to apply |
+   |---------------------|--------------------------|
+   | IN_PROGRESS | `"In Progress"` |
+   | IN_REVIEW | `"In Review"` |
+   | DONE | `"Done"` |
+   | PARKED | `"Awaiting Clarification"` |
+
+5. After any sync action, update `last_synced_at` by calling
+   `link_local_feature_tool(ticket_key, feature_path)` again — this refreshes
+   the snapshot hash.
+
 ## Quality bar
 
 After every write, verify:
@@ -150,3 +185,40 @@ After every write, verify:
 - Set `status: done` without confirming both review and eval passed
 - Re-dispatch an escalated feature without Orchestrator instruction
 - Reset `iterations` to 0 on a re-dispatch (it is cumulative)
+- Do not modify the `complexity` field of a feature once it is set. Complexity
+- is assessed at spec time by the Spec Writer. If the Orchestrator or human
+- disputes the complexity rating, escalate to the Spec Writer for a re-assessment
+- rather than editing BACKLOG.md directly.
+
+# Patch: tracker-agent.md — complexity field + dispatch routing
+
+Apply this patch to your existing `agents/tracker-agent.md`.
+
+
+## Population rule
+
+When you receive a new spec from the Spec Writer and update BACKLOG.md, copy
+the `complexity` and `complexity_rationale` fields from the spec front-matter
+verbatim. Do not interpret or override them.
+
+If a spec is missing the `complexity` field, default to `simple` and add a
+note in `complexity_rationale`: "complexity not assessed by Spec Writer —
+defaulting to simple".
+
+---
+
+## Add complexity to the dispatch query response
+
+When the Orchestrator asks "what should be dispatched next?", include the
+`complexity` field in your response for each ready feature:
+
+```
+READY FEATURES:
+  - F-042: XmlEntityExtractor  [complexity: complex]
+  - F-043: ErrorFormatter      [complexity: simple]
+```
+
+This gives the Orchestrator the information it needs to route to the Planner
+vs the Implementer without reading the spec itself.
+
+---

@@ -1,7 +1,7 @@
 ---
 name: "master-architect"
 description: "this agent is the master architect. it design the topology of the system"
-model: opus
+model: sonnet
 color: blue
 memory: project
 ---

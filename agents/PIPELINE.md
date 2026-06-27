@@ -150,6 +150,8 @@ status: active
 date: <ISO 8601 creation date>
 superseded_by: none
 superseded_date: none
+complexity: simple | complex
+complexity_rationale: "explanaition"
 ---
 ```
 
@@ -209,3 +211,161 @@ the Archivist calls them. Do not call them from any other role.)
   service is down. `list_active` is the live, filterable equivalent. Prefer the
   manifest for a glance; use `list_active` when you need to filter by type or
   domain.
+
+## §11 — Jira integration (optional)
+
+The pipeline can optionally connect to a Jira MCP bridge server.
+**Jira is never required.** Local features, specs, and tracking all work
+without it.  The bridge is a progressive enhancement.
+
+### Detecting availability
+
+Before using any Jira tool, check whether the bridge is configured:
+
+```
+call: list_synced_features
+```
+
+If the result contains `"error": "jira_not_configured"`, Jira is offline.
+Proceed as if Jira does not exist — do not retry, do not error.
+
+### Tool registry (jira-bridge MCP server, port 8001)
+
+| Tool | Who calls it | When |
+|------|-------------|------|
+| `get_ticket` | Spec Writer | At the start of a ticket-backed feature |
+| `search_tickets` | Orchestrator | To pull the next ready ticket from the backlog |
+| `get_ticket_comments` | Spec Writer, Reviewer | To read discussion thread |
+| `transition_ticket` | Orchestrator, Tracker | On status changes (In Progress, In Review, Done) |
+| `add_comment` | Reviewer, Evaluator | To push summaries or notes back to Jira |
+| `set_field` | Evaluator | To update story points after estimation |
+| `link_local_feature_tool` | Spec Writer | After creating the local feature directory |
+| `get_sync_status` | Tracker | On every tracking pass to detect drift |
+| `request_clarification` | Reviewer | When acceptance criteria are ambiguous |
+| `list_synced_features` | Orchestrator | To discover already-linked features |
+
+### Clarification parking protocol
+
+When `request_clarification` returns `{ "parked": true }`:
+
+1. The Orchestrator **must not** retry the feature immediately.
+2. Record the feature as `PARKED / Awaiting Clarification` in BACKLOG.md.
+3. Move to the next eligible feature.
+4. On subsequent pipeline runs, call `get_sync_status` for parked features.
+   If the Jira ticket has new comments, re-queue the feature.
+
+### Transition names
+
+Use these exact strings with `transition_ticket` (the tool matches by prefix,
+case-insensitive):
+
+- `"In Progress"` — when the Orchestrator dispatches a feature
+- `"In Review"` — when the Implementer signals completion
+- `"Done"` — when the Evaluator signs off
+- `"Awaiting Clarification"` — called automatically by `request_clarification`
+
+### Local sidecar file
+
+Each Jira-linked feature has a `jira_ref.json` file in its feature directory.
+This file is the local source of truth for the link.  Agents must not edit it
+directly — use the MCP tools.
+
+```json
+{
+  "ticket_key": "PROJ-42",
+  "ticket_id": "10042",
+  "feature_path": "docs/features/login/",
+  "last_synced_at": "2026-06-27T10:00:00Z",
+  "description_hash": "abc123...",
+  "status_at_sync": "In Progress",
+  "pending_clarifications": []
+}
+```
+
+### Offline / no-Jira behaviour
+
+When Jira tools return `{ "error": "jira_not_configured" }`:
+
+- **Do not surface this error to the human** unless they explicitly asked about
+  Jira status.
+- Continue with local-only workflow exactly as before.
+- Never block a feature on a Jira operation.
+
+
+# §12 — Feature complexity and Planner-driven parallelism
+
+## Complexity classification
+
+Every feature spec produced by the Spec Writer carries a `complexity` field
+in its front-matter. This field is the authoritative routing signal for the
+Orchestrator. It is set once, at spec time, and never changed by other agents.
+
+| Value | Meaning | Dispatched to |
+|-------|---------|--------------|
+| `simple` | Single Implementer can handle in one context window | Implementer |
+| `complex` | Feature requires parallel sub-tasks across disjoint write sets | Planner |
+
+Agents that produce or read specs must honour this classification. The Tracker
+copies it verbatim into BACKLOG.md.
+
+---
+
+## The Planner's contract
+
+The Planner is the implementation authority for complex features. It:
+
+- Decomposes the feature into sub-tasks with disjoint write sets
+- Creates isolated git worktrees (one per sub-task)
+- Dispatches Implementers (or child Planners) in parallel
+- Reviews each sub-task before merging
+- Merges all branches, resolves conflicts, runs post-merge tests
+- Reports back to the Orchestrator with the same protocol as an Implementer
+
+From the Orchestrator's perspective, dispatching to the Planner is identical
+to dispatching to the Implementer. The Orchestrator dispatches once and waits.
+
+---
+
+## Nesting depth
+
+Planners can spawn child Planners for complex sub-tasks. The nesting depth
+is capped at **2** (PLANNER_DEPTH 0, 1, 2). At depth 2, all sub-tasks are
+treated as `simple` regardless of their assessed complexity, and dispatched
+to Implementers directly.
+
+```
+Orchestrator
+  └─ Planner (depth=0)
+       ├─ Implementer  (simple sub-task)
+       └─ Planner (depth=1)
+            ├─ Implementer  (simple sub-task)
+            └─ Implementer  (simple sub-task)
+            # depth=2 would be the limit if needed
+```
+
+---
+
+## Worktree conventions
+
+- All worktrees live under `.worktrees/` in the repo root
+- `.worktrees/` is in `.gitignore`
+- Worktree branches are named `feat/<subtask-id>`
+- The Planner is responsible for creating and removing all worktrees it
+  creates — no worktrees should persist after a Planner reports DONE or FAILED
+- Sub-task manifests live at `docs/plans/<feature-id>/<subtask-id>.md`
+- Post-merge test output lives at `docs/plans/<feature-id>/post-merge-test.txt`
+
+---
+
+## Agent read policy for Planner outputs
+
+The Tracker, Reviewer, and Evaluator interact with Planner-implemented
+features exactly as they do with Implementer-implemented features — they read
+from the main branch after the Planner has merged everything. They do not need
+to know a Planner was involved.
+
+The only exception: the Reviewer is also invoked by the Planner on each
+individual sub-task branch before merging. In that context the Reviewer must
+restrict its scope to the sub-task's write set, as specified in the sub-task
+manifest. The post-merge Reviewer/Evaluator run by the Orchestrator covers the
+integrated result.
