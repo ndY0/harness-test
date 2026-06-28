@@ -1,3 +1,5 @@
+pub mod scoring;
+
 /// Integer tile coordinates (row, col).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Position {
