@@ -46,7 +46,8 @@ impl Maze {
         self.cells[pos.row][pos.col] == Cell::GhostHouse
     }
 
-    /// Returns true when col 0 of the given row is non-wall (open tunnel side).
+    /// Returns true when col 0 of the given row is non-wall (open tunnel edge).
+    /// Stage 3 and 7 have tunnel rows; all other rows have Wall at col 0.
     pub fn tunnel_row(&self, row: usize) -> bool {
         self.cells[row][0] != Cell::Wall
     }
