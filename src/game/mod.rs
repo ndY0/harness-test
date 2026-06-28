@@ -2,6 +2,8 @@ pub mod maze;
 pub mod stages;
 pub mod player;
 pub mod pellets;
+pub mod ghost;
+pub mod timers;
 
 /// Integer tile coordinates (row, col).
 #[derive(Debug, Clone, Copy, PartialEq)]
