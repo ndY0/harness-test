@@ -40,6 +40,12 @@ impl PelletMap {
         self.data.iter().all(|&active| !active)
     }
 
+    /// Returns true when the pellet at pos is still active (uneaten).
+    pub fn is_active(&self, pos: Position) -> bool {
+        let idx = pos.row * self.cols + pos.col;
+        idx < self.data.len() && self.data[idx]
+    }
+
     pub fn active_positions(&self) -> impl Iterator<Item = Position> + '_ {
         self.data.iter().enumerate().filter_map(|(idx, &active)| {
             if active {
