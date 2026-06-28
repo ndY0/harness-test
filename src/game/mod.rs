@@ -1,3 +1,6 @@
+pub mod maze;
+pub mod stages;
+
 /// Integer tile coordinates (row, col).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Position {
