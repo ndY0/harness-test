@@ -1,3 +1,6 @@
+pub mod player;
+pub mod pellets;
+
 /// Integer tile coordinates (row, col).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Position {
