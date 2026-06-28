@@ -4,6 +4,8 @@ pub mod player;
 pub mod pellets;
 pub mod ghost;
 pub mod timers;
+pub mod scoring;
+pub mod physics;
 
 /// Integer tile coordinates (row, col).
 #[derive(Debug, Clone, Copy, PartialEq)]
