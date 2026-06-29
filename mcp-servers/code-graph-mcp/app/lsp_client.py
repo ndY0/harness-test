@@ -63,6 +63,8 @@ class LspClient:
         self._next_id = 1
         self._pending: dict[int, asyncio.Future] = {}
         self._reader_task: asyncio.Task | None = None
+        self._write_lock = asyncio.Lock()
+        self._server_capabilities: dict = {}
 
     # -----------------------------------------------------------------------
     # Lifecycle
@@ -95,14 +97,21 @@ class LspClient:
         if init_options:
             init_params["initializationOptions"] = init_options
 
-        await asyncio.wait_for(
+        result = await asyncio.wait_for(
             self._request("initialize", init_params),
             timeout=timeout,
         )
+        self._server_capabilities = result.get("capabilities", {}) if result else {}
 
         # Notify server that client is ready
         await self._notify("initialized", {})
-        log.info("lsp.initialized", command=self._command[0])
+        log.info("lsp.initialized",
+                 command=self._command[0],
+                 capabilities={
+                     "callHierarchy": self.has_call_hierarchy,
+                     "typeHierarchy": self.has_type_hierarchy,
+                     "keys": sorted(self._server_capabilities.keys()),
+                 })
 
     async def stop(self) -> None:
         """Graceful shutdown: send shutdown/exit, then terminate."""
@@ -127,6 +136,14 @@ class LspClient:
     # -----------------------------------------------------------------------
     # High-level LSP method wrappers
     # -----------------------------------------------------------------------
+
+    @property
+    def has_call_hierarchy(self) -> bool:
+        return bool(self._server_capabilities.get("callHierarchyProvider"))
+
+    @property
+    def has_type_hierarchy(self) -> bool:
+        return bool(self._server_capabilities.get("typeHierarchyProvider"))
 
     async def workspace_symbols(self, query: str = "") -> list[dict]:
         """workspace/symbol — all symbols matching query (empty = all)."""
@@ -164,6 +181,9 @@ class LspClient:
                 "position": {"line": line, "character": character},
             },
         )
+        if result is None:
+            log.info("lsp.prepare_call_hierarchy_null",
+                     uri=file_uri, line=line, character=character)
         return result or []
 
     async def incoming_calls(self, item: dict) -> list[dict]:
@@ -230,6 +250,13 @@ class LspClient:
             {"textDocument": {"uri": file_uri}},
         )
 
+    async def did_save(self, file_uri: str, text: str | None = None) -> None:
+        """textDocument/didSave — triggers on-save analysis (cargo check)."""
+        params: dict = {"textDocument": {"uri": file_uri}}
+        if text is not None:
+            params["text"] = text
+        await self._notify("textDocument/didSave", params)
+
     # -----------------------------------------------------------------------
     # JSON-RPC internals
     # -----------------------------------------------------------------------
@@ -251,10 +278,14 @@ class LspClient:
 
     async def _send(self, message: dict) -> None:
         assert self._process and self._process.stdin
+        # JSON-RPC 2.0 §4: params MUST be omitted, not null
+        if message.get("params") is None:
+            message = {k: v for k, v in message.items() if k != "params"}
         body = json.dumps(message).encode("utf-8")
         header = _HEADER.format(len(body)).encode("ascii")
-        self._process.stdin.write(header + body)
-        await self._process.stdin.drain()
+        async with self._write_lock:
+            self._process.stdin.write(header + body)
+            await self._process.stdin.drain()
 
     async def _read_loop(self) -> None:
         """Background task: read LSP messages from stdout and dispatch them."""
@@ -287,6 +318,15 @@ class LspClient:
             pass
         except Exception as e:
             log.error("lsp.reader_error", error=str(e))
+        finally:
+            error = ConnectionError("LSP reader loop terminated")
+            for future in self._pending.values():
+                if not future.done():
+                    try:
+                        future.set_exception(error)
+                    except Exception:
+                        pass
+            self._pending.clear()
 
     def _dispatch(self, message: dict) -> None:
         """Route an incoming LSP message to the appropriate waiting future."""

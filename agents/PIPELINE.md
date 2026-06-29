@@ -157,3 +157,44 @@ Jira is never required. All workflows work locally. Bridge is a progressive enha
 - Post-merge test output: `docs/plans/<feature-id>/post-merge-test.txt`
 
 **Agent read policy:** Tracker, Reviewer, Evaluator read only the merged result. Exception: Reviewer is also invoked on each sub-task branch before merge, with scope restricted to that sub-task’s write set.
+
+# §13 — Code Graph MCP (LSP-backed)
+
+All agents may use the Code Graph MCP for semantic code analysis. It provides
+real-time LSP data without requiring agents to manually grep or recursively
+read files.
+
+**Purpose**: Resolve dependencies, inspect call hierarchies, find type usages,
+and calculate safe edit surfaces before modifying code.
+
+**Allowed Agents**: Planner, Implementer, Reviewer (read‑only for all; no
+write/modify operations on the codebase itself).
+
+**Key tools (grouped)**:
+
+| Category | Tools |
+|----------|-------|
+| Discovery | `list_languages`, `get_stats`, `get_file_symbols` |
+| Navigation | `find_symbol`, `fuzzy_find` |
+| Structure | `get_module_tree`, `get_module_api` |
+| Dependency | `get_callers`, `get_callees`, `get_cross_module_boundary` |
+| Typing | `get_type_usages`, `get_implementors`, `get_trait_dependents` |
+| Safety | `get_edit_surface`, `get_signature`, `get_tests_for` |
+| Indexing | `index_file`, `index_workspace` (Planner/Implementer may trigger on new files only) |
+
+**Usage rules**:
+- **Before editing any existing file**, the Implementer **must** call
+  `get_callers(symbol)` on the public function/type being modified to assess
+  impact. If callers exist outside the current feature's write set, the
+  Implementer must return `blocked` and escalate to Orchestrator.
+- **During decomposition**, the Planner **must** use `get_coupling_hotspots`
+  and `get_cross_module_boundary` to validate that sub-task write sets are
+  truly disjoint. If two sub-tasks touch files that are tightly coupled by
+  direct calls, merge those sub-tasks or mark a sequenced dependency.
+- **To determine what to change**, use `get_edit_surface(file)` to receive a
+  minimal set of symbols that actually need modification — honour this list.
+- **Indexing**: assume the workspace is already indexed. Only call
+  `index_file(path)` if the file is freshly created in your current worktree
+  and `get_file_symbols` returns stale or empty data for it.
+- **Language context**: call `list_languages` to verify the active LSP plugin
+  matches the language of the files you are analysing.

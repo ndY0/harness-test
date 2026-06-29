@@ -44,9 +44,15 @@ class RustPlugin(LanguagePlugin):
             "cargo": {
                 "buildScripts": {"enable": True},
                 "features": "all",
+                # Workspace is read-only — write build artifacts here
+                "targetDir": "/tmp/cargo-target",
             },
-            "checkOnSave": {"enable": False},  # don't run cargo check on our queries
-            "diagnostics": {"enable": False},  # we don't need diagnostics
+            # Run cargo check so semantic analysis is available for
+            # call hierarchy and references.  The indexer waits for
+            # analysis completion before querying.
+            "check": {"command": "check"},
+            "checkOnSave": {"enable": True},
+            "diagnostics": {"enable": False},
         }
 
     def symbol_kind_to_graph_kind(self, lsp_kind: int) -> str:

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     # Language to activate. Must match a registered plugin name.
     # Supported: rust, java, python
-    language: str = "rust"
+    code_language: str = "rust"
 
     # LSP server startup timeout in seconds.
     lsp_init_timeout: int = 60

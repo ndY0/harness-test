@@ -72,6 +72,7 @@ mcp = FastMCP(
     lifespan=lifespan,
     host=config.host,
     port=config.port,
+    json_response=True
 )
 
 

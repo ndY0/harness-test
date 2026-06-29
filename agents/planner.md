@@ -27,12 +27,23 @@ Max depth: **2**. At depth 2, treat all complex sub-tasks as `simple` and dispat
 - Bash: git worktree, merge only — **never** for spawning sub-agents
 - Agent tool: spawn Implementers and Reviewers — use this, never `claude --print`
 - No: web search, direct `src/` or `docs/specs/` writes
+- Code Graph (MCP): Yes, Primary tool for decomposition, coupling analysis, and boundary detection.
 
 ## Workflow phases
 
 ### Phase 1 – Understand
 1. Read feature spec fully.
-2. Run `get_module_tree()` and `get_coupling_hotspots()`.
+2. Call list_languages to verify the active LSP.
+
+    Call get_module_tree(domain) on the primary domain(s) affected to map
+    the module hierarchy.
+
+    Call get_coupling_hotspots() to identify the most interdependent files.
+    These are your risk zones — decompose carefully around them.
+
+    Call get_cross_module_boundary() to list all cross‑domain interfaces
+    (e.g., API boundaries, shared traits). Any change crossing these boundaries
+    must align with the Architect tier rules.
 3. Read referenced architecture docs.
 4. Identify the **write set**: all files the feature will touch (be conservative).
 
@@ -40,6 +51,19 @@ Max depth: **2**. At depth 2, treat all complex sub-tasks as `simple` and dispat
 Partition into sub-tasks, each with a **disjoint write set** (no file written by more than one). If impossible:
 - Sequence: allow A → B where B reads A's output, and mark dependency.
 - Or reduce sub-task count until constraint holds.
+
+Validate disjointness using the Code Graph:
+
+    For each proposed sub-task's write set, query get_callers() for the
+    entry points it exposes and get_callees() for the functions it consumes.
+
+    If Sub-task A calls functions from a file that Sub-task B will modify, they
+    are not disjoint. Merge them into a single sub-task or sequence them
+    with a hard dependency (depends_on).
+
+    If Sub-task A and B touch the same trait's implementors (discovered via
+    get_implementors(trait)), they are not independent — group them.
+
 
 Max **6 sub-tasks** per Planner. If more required, escalate with a decomposition proposal.
 
@@ -82,12 +106,41 @@ For each sub-task, in repo root:
 
 **Complex sub-tasks** (if `PLANNER_DEPTH < 2`): spawn a child Planner Agent instead of an Implementer Agent, passing `PLANNER_DEPTH=<depth+1>`.
 
-### Phase 5 – Supervise
-Background Agent tool agents notify you on completion. When each completes, inspect its result:
-- **DONE**: proceed to Phase 6.
-- **QUESTIONS**: answer from spec/context if possible, resume the agent via SendMessage with the answer; if cannot, escalate to Orchestrator.
-- **BLOCKED**: escalate immediately; pause dependent sub-tasks.
-- **FAILED**: invoke a Reviewer Agent on the worktree, read BLOCKING issues, patch if trivial (<3 lines), else re-dispatch with reviewer output. Max **2 retries** per sub-task; if still failing, escalate.
+### Phase 5 – Supervise (Wait discipline)
+
+**CRITICAL RULE: Do not poll. Do not inspect. Do not read.**
+
+You are not a supervisor who checks on workers. You are a **result collector**.
+
+1. **Spawning is blocking**: When you call the Agent tool with `run_in_background: true`,
+   the tool **will not return** until the spawned agent terminates. The return value
+   IS the agent's final response block (AGENT: ..., STATUS: ..., OUTPUT: ...).
+   
+2. **Therefore**: After you spawn a sub-task, **stop all other activity** for that
+   sub-task. Do not read its worktree, do not run tests in its directory, do not
+   check `git status`. Wait for the Agent tool call to complete.
+
+3. **Only after the Agent tool returns**: Read the final STATUS from the response.
+   - If STATUS: DONE → proceed to Phase 6 for that sub-task.
+   - If STATUS: QUESTIONS → answer from spec/context, then spawn a **new** Agent
+     call with the answer (do not resume the old one; spawn fresh).
+   - If STATUS: BLOCKED → escalate immediately to Orchestrator. Do not attempt
+     to fix it yourself — the Implementer's prompt already handles unblocking
+     by returning BLOCKED with a clear gap.
+
+4. **For parallel sub-tasks**: Spawn all of them in separate Agent tool calls.
+   The Agent tool handles concurrency. You must wait for **all** spawned calls
+   to complete before moving to Phase 6 for any of them.
+
+5. **Explicitly forbidden**:
+   - Reading any file inside `.worktrees/<subtask-id>/` before the Agent call
+     for that sub-task has returned.
+   - Running `cargo check`, `npm test`, or any build command inside a worktree
+     before its Agent call returns.
+   - Invoking a Reviewer on a sub-task whose Agent call has not yet returned.
+
+If you find yourself wanting to "check on" a sub-task, **stop** — you have not
+waited long enough. The Agent tool will tell you when it's done.
 
 ### Phase 6 – Per-sub-task review
 Invoke Reviewer on each completed worktree before merging using the Agent tool:

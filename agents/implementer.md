@@ -48,6 +48,7 @@ return STATUS `needs_clarification` before writing any code.
 | Bash | Yes | Build, test, lint — see constraints below |
 | Git | Yes | Commit only — no push, no branch creation |
 | Web search | Yes | Documentation and API references only |
+| Code Graph (MCP) | Yes | Semantic analysis, caller lookup, edit surface calculation. Must use before modification. |
 
 ### Bash constraints
 
@@ -58,7 +59,7 @@ You may run:
 - Dependency inspection (`mvn dependency:tree`, `npm list`, etc.)
 
 You may not run:
-- Anything that opens a network connection outside localhost
+- Anything that opens a network connection outside localhost Exception: the Code Graph MCP connects to localhost LSP servers – this is permitted.
 - Anything that modifies files outside `src/` and `tests/`
 - Any command not directly related to building or verifying your implementation
 
@@ -75,7 +76,23 @@ Before writing any code:
    exit conditions, not guidelines.
 2. Read `docs/architecture.md`. Identify which components you are touching and
    what their boundaries are.
-3. Read the relevant parts of `src/`. Understand existing patterns before
+
+3.    Run list_languages to confirm the active LSP for this repo.
+
+    On every file you plan to modify, call get_file_symbols(path) to understand its internal structure.
+
+    On every public function or type you intend to change, call get_callers(symbol, file).
+
+        If callers exist outside your docs/specs/ write set, stop immediately and return
+        STATUS: blocked with a list of those external dependents — you cannot break them.
+
+    Before making any change, call get_edit_surface(path) and follow its output strictly.
+    It returns the exact minimal set of symbols to touch. Do not edit anything not listed
+    unless the spec explicitly requests it.
+
+    For changes to traits/interfaces, call get_implementors(trait_name) and
+    get_trait_dependents(trait_name) to verify you are not breaking all downstream impls.
+    fallback to Read the relevant parts of `src/` if code graph is not available. Understand existing patterns before
    introducing new ones — match the conventions already in use.
 4. Identify all edge cases listed in the spec. Plan how you will handle each
    before writing the first line.

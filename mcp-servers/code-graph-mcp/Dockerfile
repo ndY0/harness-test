@@ -22,8 +22,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 ARG LANGUAGE=rust
 
 # --- Rust: rust-analyzer -------------------------------------------------------
-# rust-analyzer is a single static binary. We fetch the latest release.
+# Install Rust toolchain (rust-analyzer needs cargo/rustc for full analysis).
+# Then download rust-analyzer binary.
 RUN if [ "$LANGUAGE" = "rust" ]; then \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    . $HOME/.cargo/env && \
     ARCH=$(uname -m) && \
     if [ "$ARCH" = "x86_64" ]; then RA_ARCH="x86_64-unknown-linux-gnu"; \
     elif [ "$ARCH" = "aarch64" ]; then RA_ARCH="aarch64-unknown-linux-gnu"; \
@@ -33,6 +36,9 @@ RUN if [ "$LANGUAGE" = "rust" ]; then \
     chmod +x /usr/local/bin/rust-analyzer && \
     echo "rust-analyzer installed: $(rust-analyzer --version)"; \
     fi
+
+# Ensure cargo/rustc are on PATH for the application
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # --- Java: Eclipse JDT Language Server ----------------------------------------
 # Pin to a known-good milestone release.

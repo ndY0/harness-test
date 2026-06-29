@@ -18,10 +18,11 @@ Edge predicates (all on Symbol unless noted):
 
 from __future__ import annotations
 
+import asyncio
 import json
 import structlog
 import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from .config import settings
 
@@ -91,7 +92,14 @@ class DGraphClient:
     # Low-level helpers
     # -----------------------------------------------------------------------
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=0.5))
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=0.5),
+        retry=retry_if_exception_type(
+            (httpx.HTTPStatusError, httpx.ConnectError,
+             httpx.TimeoutException, httpx.RemoteProtocolError)
+        ),
+    )
     async def _mutate(self, nquads: str, commit: bool = True) -> dict:
         params = {"commitNow": "true"} if commit else {}
         resp = await self._http.post(
@@ -101,9 +109,42 @@ class DGraphClient:
             params=params,
         )
         resp.raise_for_status()
-        return resp.json()
+        body = resp.json()
+        if "errors" in body:
+            err_msgs = [e.get("message", str(e)) for e in body["errors"]]
+            raise RuntimeError(f"DGraph mutation error: {err_msgs}")
+        return body
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=0.5))
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=0.5),
+        retry=retry_if_exception_type(
+            (httpx.HTTPStatusError, httpx.ConnectError,
+             httpx.TimeoutException, httpx.RemoteProtocolError)
+        ),
+    )
+    async def _mutate_json(self, payload: dict, commit: bool = True) -> dict:
+        params = {"commitNow": "true"} if commit else {}
+        resp = await self._http.post(
+            f"{self._base}/mutate",
+            json=payload,
+            params=params,
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        if "errors" in body:
+            err_msgs = [e.get("message", str(e)) for e in body["errors"]]
+            raise RuntimeError(f"DGraph mutation error: {err_msgs}")
+        return body
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=0.5),
+        retry=retry_if_exception_type(
+            (httpx.HTTPStatusError, httpx.ConnectError,
+             httpx.TimeoutException, httpx.RemoteProtocolError)
+        ),
+    )
     async def _query(self, dql: str, variables: dict | None = None) -> dict:
         if variables:
             resp = await self._http.post(
@@ -173,19 +214,34 @@ class DGraphClient:
         data = await self._query(query)
         existing = data.get("q", [])
 
-        fields = _symbol_nquads(sym)
+        node = {
+            "symbol_id": sym["id"],
+            "symbol_name": sym["name"],
+            "symbol_kind": sym["kind"],
+            "symbol_file": sym.get("file_path", ""),
+            "symbol_line": sym.get("line", 0),
+            "symbol_col": sym.get("col", 0),
+            "symbol_signature": sym.get("signature", ""),
+            "symbol_doc": sym.get("doc", ""),
+            "symbol_visibility": sym.get("visibility", "private"),
+            "symbol_module": sym.get("module", ""),
+            "dgraph.type": "Symbol",
+        }
 
         if existing:
-            uid = existing[0]["uid"]
-            triples = "\n".join(f'<{uid}> {p} {o} .' for p, o in fields)
+            node["uid"] = existing[0]["uid"]
         else:
-            uid = "_:sym"
-            triples = "\n".join(f'_:sym {p} {o} .' for p, o in fields)
-            triples += f'\n_:sym <dgraph.type> "Symbol" .'
+            node["uid"] = "_:sym"
 
-        result = await self._mutate(triples)
-        if uid == "_:sym":
-            uid = result["data"]["uids"]["sym"]
+        result = await self._mutate_json({"set": [node]})
+        if existing:
+            return existing[0]["uid"]
+
+        uid = result.get("data", {}).get("uids", {}).get("sym", "")
+        if not uid:
+            raise RuntimeError(
+                f"Failed to resolve blank node uid for symbol {sid!r}: {result}"
+            )
         return uid
 
     async def add_edge(self, from_uid: str, predicate: str, to_uid: str) -> None:
@@ -193,11 +249,16 @@ class DGraphClient:
         await self._mutate(nquads)
 
     async def resolve_uid(self, symbol_id: str) -> str | None:
-        data = await self._query(
-            f'{{ q(func: eq(symbol_id, "{symbol_id}")) {{ uid }} }}'
-        )
-        q = data.get("q", [])
-        return q[0]["uid"] if q else None
+        # Retry: DGraph indexes may not be immediately ready after mutation
+        for _ in range(5):
+            data = await self._query(
+                f'{{ q(func: eq(symbol_id, "{symbol_id}")) {{ uid }} }}'
+            )
+            q = data.get("q", [])
+            if q:
+                return q[0]["uid"]
+            await asyncio.sleep(0.1)
+        return None
 
     async def delete_file_symbols(self, file_path: str) -> None:
         """Remove all Symbol nodes for a given file before re-indexing it."""
@@ -467,10 +528,15 @@ class DGraphClient:
         }
         """
         data = await self._query(dql)
-        return {
-            "symbols": data.get("symbols", [{}])[0].get("count(uid)", 0),
-            "files": data.get("files", [{}])[0].get("count(uid)", 0),
-        }
+        symbol_count = data.get("symbols", [{}])[0].get("count(uid)", 0)
+        file_count = data.get("files", [{}])[0].get("count(uid)", 0)
+        if not symbol_count:
+            # Fallback: count nodes that have a symbol_id predicate
+            fallback = await self._query(
+                "{ q(func: has(symbol_id)) { count(uid) } }"
+            )
+            symbol_count = fallback.get("q", [{}])[0].get("count(uid)", 0)
+        return {"symbols": symbol_count, "files": file_count}
 
     async def close(self) -> None:
         await self._http.aclose()
@@ -500,7 +566,13 @@ def _forward_expand(edge: str, depth: int, leaf_fields: str) -> str:
 
 
 def _esc(s: str) -> str:
-    return s.replace("\\", "\\\\").replace('"', '\\"')
+    return (
+        s.replace("\\", "\\\\")
+         .replace('"', '\\"')
+         .replace("\n", "\\n")
+         .replace("\r", "\\r")
+         .replace("\t", "\\t")
+    )
 
 
 def _symbol_nquads(sym: dict) -> list[tuple[str, str]]:
