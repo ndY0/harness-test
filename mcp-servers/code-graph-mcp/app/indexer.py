@@ -278,28 +278,28 @@ async def _extract_edges(
             probe_line = probe["line"] - 1
             probe_col = probe["col"]
             ready = False
-            for delay in (0.5, 1, 2, 4, 8, 16):
+            for delay in (0.1, 0.2, 0.5, 1):
                 await asyncio.sleep(delay)
                 items = await lsp.prepare_call_hierarchy(file_uri, probe_line, probe_col)
                 if items:
-                    for extra in (2, 4, 8, 16):
+                    for extra in (0.2, 0.5, 1, 2):
                         await asyncio.sleep(extra)
                         outgoing = await lsp.outgoing_calls(items[0])
                         incoming = await lsp.incoming_calls(items[0])
                         if outgoing or incoming:
                             ready = True
                             break
-                        log.info("indexer.call_hierarchy_stale",
-                                 sym=probe["name"], extra=extra)
+                        log.debug("indexer.call_hierarchy_stale",
+                                  sym=probe["name"], extra=extra)
                     else:
-                        log.warning("indexer.call_hierarchy_no_edges",
-                                    sym=probe["name"])
+                        log.debug("indexer.call_hierarchy_no_edges",
+                                  sym=probe["name"])
                     ready = True
                     break
-                log.info("indexer.call_hierarchy_waiting",
-                         sym=probe["name"], delay=delay)
+                log.debug("indexer.call_hierarchy_waiting",
+                          sym=probe["name"], delay=delay)
             if ready:
-                log.info("indexer.call_hierarchy_ready", sym=probe["name"])
+                log.debug("indexer.call_hierarchy_ready", sym=probe["name"])
             else:
                 log.warning("indexer.call_hierarchy_timeout", sym=probe["name"])
 
