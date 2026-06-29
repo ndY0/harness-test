@@ -268,19 +268,32 @@ async def _extract_edges(
         call_syms = [s for s in symbols if s["kind"] in _CALL_HIERARCHY_KINDS]
         log.info("indexer.call_hierarchy_start", file=file_path, candidates=len(call_syms))
 
-        # Trigger cargo-check via didSave (incremental indexing needs fresh analysis)
-        await lsp.did_save(file_uri)
-
-        # Probe: wait for cargo-check / analysis to be ready.
+        # Probe: wait for analysis to be ready.
+        # prepare_call_hierarchy can return syntax-level items before
+        # semantic analysis completes — verify with outgoing_calls.
+        # Use the last callable (impl method / body fn), not the first
+        # (which may be a trait declaration with no edges).
         if call_syms:
-            probe = call_syms[0]
-            probe_line = probe.get("range_line", probe["line"]) - 1
-            probe_col = probe.get("range_col", probe["col"])
+            probe = call_syms[-1]
+            probe_line = probe["line"] - 1
+            probe_col = probe["col"]
             ready = False
             for delay in (0.5, 1, 2, 4, 8, 16):
                 await asyncio.sleep(delay)
                 items = await lsp.prepare_call_hierarchy(file_uri, probe_line, probe_col)
                 if items:
+                    for extra in (2, 4, 8, 16):
+                        await asyncio.sleep(extra)
+                        outgoing = await lsp.outgoing_calls(items[0])
+                        incoming = await lsp.incoming_calls(items[0])
+                        if outgoing or incoming:
+                            ready = True
+                            break
+                        log.info("indexer.call_hierarchy_stale",
+                                 sym=probe["name"], extra=extra)
+                    else:
+                        log.warning("indexer.call_hierarchy_no_edges",
+                                    sym=probe["name"])
                     ready = True
                     break
                 log.info("indexer.call_hierarchy_waiting",
@@ -362,8 +375,8 @@ async def _ref_edges_for_symbol(
 ) -> list[tuple[str, str, str]]:
     """Use textDocument/references as fallback to build call edges."""
     file_uri = sym["file_uri"]
-    line = sym.get("range_line", sym["line"]) - 1
-    col = sym.get("range_col", sym["col"])
+    line = sym["line"] - 1
+    col = sym["col"]
 
     refs = await lsp.references(file_uri, line, col)
     if not refs:
@@ -391,9 +404,9 @@ async def _call_edges_for_symbol(
 ) -> list[tuple[str, str, str]]:
     """Query call hierarchy for a single symbol and return edge tuples."""
     file_uri = sym["file_uri"]
-    # LSP positions are 0-based — use range start (covers entire decl) for hierarchy
-    line = sym.get("range_line", sym["line"]) - 1
-    col = sym.get("range_col", sym["col"])
+    # LSP positions are 0-based — use selectionRange (identifier) position
+    line = sym["line"] - 1
+    col = sym["col"]
 
     items = await lsp.prepare_call_hierarchy(file_uri, line, col)
     if not items:
@@ -421,8 +434,8 @@ async def _type_edges_for_symbol(
 ) -> list[tuple[str, str, str]]:
     """Query type hierarchy for a single symbol and return edge tuples."""
     file_uri = sym["file_uri"]
-    line = sym.get("range_line", sym["line"]) - 1
-    col = sym.get("range_col", sym["col"])
+    line = sym["line"] - 1
+    col = sym["col"]
 
     items = await lsp.prepare_type_hierarchy(file_uri, line, col)
     if not items:

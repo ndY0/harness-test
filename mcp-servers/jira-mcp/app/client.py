@@ -214,7 +214,7 @@ class JiraClient:
         return ticket
 
     async def search_tickets(self, jql: str, max_results: int = 20) -> JiraSearchResult:
-        raw = await self._post("/search", {
+        raw = await self._post("/search/jql", {
             "jql": jql,
             "maxResults": max_results,
             "fields": ["summary", "status", "priority", "issuetype", "assignee"],

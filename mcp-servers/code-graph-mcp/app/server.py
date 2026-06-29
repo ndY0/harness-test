@@ -179,7 +179,20 @@ async def _wait_for_analysis(
         await asyncio.sleep(delay)
         items = await lsp.prepare_call_hierarchy(file_uri, probe_line, probe_col)
         if items:
-            log.info("server.analysis_ready")
+            # Verify semantic analysis is truly complete
+            for extra in (2, 4, 8, 16):
+                await asyncio.sleep(extra)
+                outgoing = await lsp.outgoing_calls(items[0])
+                incoming = await lsp.incoming_calls(items[0])
+                if outgoing or incoming:
+                    log.info("server.analysis_ready")
+                    try:
+                        await lsp.did_close(file_uri)
+                    except Exception:
+                        pass
+                    return
+                log.info("server.analysis_stale", extra=extra)
+            log.info("server.analysis_ready_no_edges")
             try:
                 await lsp.did_close(file_uri)
             except Exception:

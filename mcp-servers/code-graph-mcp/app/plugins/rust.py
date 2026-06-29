@@ -51,7 +51,7 @@ class RustPlugin(LanguagePlugin):
             # call hierarchy and references.  The indexer waits for
             # analysis completion before querying.
             "check": {"command": "check"},
-            "checkOnSave": {"enable": True},
+            "checkOnSave": {"enable": False},
             "diagnostics": {"enable": False},
         }
 

@@ -177,22 +177,16 @@ class DGraphClient:
         existing = data.get("q", [])
         if existing:
             uid = existing[0]["uid"]
-            nquads = f"""
-            <{uid}> <file_path> "{_esc(file_path)}" .
-            <{uid}> <file_language> "{language}" .
-            <{uid}> <file_lines> "{lines}"^^<xs:int> .
-            """
+            await self._mutate_json({"set": [
+                {"uid": uid, "file_path": file_path,
+                 "file_language": language, "file_lines": lines}
+            ]})
         else:
-            uid = "_:file"
-            nquads = f"""
-            _:file <file_id> "{file_id}" .
-            _:file <file_path> "{_esc(file_path)}" .
-            _:file <file_language> "{language}" .
-            _:file <file_lines> "{lines}"^^<xs:int> .
-            _:file <dgraph.type> "File" .
-            """
-        result = await self._mutate(nquads)
-        if uid == "_:file":
+            result = await self._mutate_json({"set": [
+                {"uid": "_:file", "file_id": file_id, "file_path": file_path,
+                 "file_language": language, "file_lines": lines,
+                 "dgraph.type": "File"}
+            ]})
             uid = result["data"]["uids"]["file"]
         return uid
 
@@ -245,8 +239,11 @@ class DGraphClient:
         return uid
 
     async def add_edge(self, from_uid: str, predicate: str, to_uid: str) -> None:
-        nquads = f"<{from_uid}> <{predicate}> <{to_uid}> ."
-        await self._mutate(nquads)
+        await self._mutate_json({
+            "set": [
+                {"uid": from_uid, predicate: {"uid": to_uid}}
+            ]
+        })
 
     async def resolve_uid(self, symbol_id: str) -> str | None:
         # Retry: DGraph indexes may not be immediately ready after mutation

@@ -116,7 +116,7 @@ services:
       dockerfile: Dockerfile
       args:
         # Set LANGUAGE in .env to control which LSP server is installed
-        LANGUAGE: ${LANGUAGE:-rust}
+        LANGUAGE: ${CG_LANG:-rust}
     container_name: code-graph-mcp
     restart: unless-stopped
     ports:
@@ -126,7 +126,7 @@ services:
       MCP_HOST: "0.0.0.0"
       MCP_PORT: "8765"
       LOG_LEVEL: "INFO"
-      LANGUAGE: "${LANGUAGE:-rust}"
+      CODE_LANGUAGE: "${CG_LANG:-rust}"
       LSP_INIT_TIMEOUT: "${LSP_INIT_TIMEOUT:-90}"
       # Java-specific (ignored for other languages)
       JDTLS_HOME: "/opt/jdtls"
@@ -134,7 +134,7 @@ services:
       # Python-specific
       PYTHON_LSP: "${PYTHON_LSP:-pylsp}"
     volumes:
-      - "${REPO_HOST_PATH}:/workspace:ro"
+      - "${REPO_HOST_PATH}:/workspace:rw"
     networks:
       - cgraph-net
     depends_on:
