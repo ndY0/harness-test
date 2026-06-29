@@ -16,20 +16,22 @@ call_tool() {
     local name="$1" id="$2" json_args="$3"
     local out="$RESULTS_DIR/${id}_${name}.json"
     local resp
+    local sess_header=()
+    [ -n "${SESSION_ID:-}" ] && sess_header=(-H "mcp-session-id: $SESSION_ID")
     resp=$(curl -s -X POST "$MCP_ENDPOINT" \
         -H "Content-Type: application/json" \
         -H "Accept: application/json" \
-        -H "mcp-session-id: ${SESSION_ID:-}" \
+        "${sess_header[@]}" \
         -d "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"$name\",\"arguments\":$json_args},\"id\":$id}")
     echo "$resp" | jq . > "$out"
     echo "$resp"
 }
 
 # Extract the inner result from a tool call response.
-# doc-mcp runs with json_response=True, so structuredContent.result is the
-# actual JSON value (not a string-encoded version).
+# structuredContent.result may be either an inline JSON value or a
+# JSON-encoded string — handle both.
 inner() {
-    jq -c '.result.structuredContent.result // .result.content[0].text // empty'
+    jq -c '(.result.structuredContent.result // .result.content[0].text // empty) | if type == "string" then fromjson else . end'
 }
 
 # Check if the response contains an error
@@ -38,43 +40,34 @@ has_error() { jq -e '.error // empty' > /dev/null 2>&1; }
 pass() { echo "  PASS: $*"; PASS=$((PASS + 1)); }
 fail_test() { echo "  FAIL: $*"; FAIL=$((FAIL + 1)); }
 
-# ── 01. Initialize ─────────────────────────────────────────────────────────
+# ── 01. Server reachable check ─────────────────────────────────────────────
 
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  doc-mcp API Test Suite                                     ║"
+echo "║  doc-mcp API Test Suite (stateless HTTP)                    ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
-echo "━━━ [01] INITIALIZE ━━━"
-RESP=$(curl -s -i -X POST "$MCP_ENDPOINT" \
+echo "━━━ [01] SERVER REACHABLE ━━━"
+# Stateless mode: no initialize/initialized handshake needed.
+# Probe the server with a cheap tool call.
+resp=$(curl -s -X POST "$MCP_ENDPOINT" \
     -H "Content-Type: application/json" \
-    -H "Accept: application/json, text/event-stream" \
-    -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test-suite","version":"1.0"}},"id":1}')
-
-SESSION_ID=$(echo "$RESP" | grep -i "mcp-session-id" | awk '{print $2}' | tr -d '\r\n ' || true)
-if [ -z "$SESSION_ID" ]; then
-    echo "  NOTE: No session ID received (stateless mode). Continuing without."
-    SESSION_ID=""
+    -H "Accept: application/json" \
+    -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"list_active","arguments":{}},"id":1}')
+if echo "$resp" | jq -e '.result // empty' > /dev/null 2>&1; then
+    pass "Server reachable at $MCP_ENDPOINT"
+elif echo "$resp" | jq -e '.error // empty' > /dev/null 2>&1; then
+    err_msg=$(echo "$resp" | jq -r '.error.message // "unknown error"')
+    fail_test "Server responded with error: $err_msg"
 else
-    echo "  Session: $SESSION_ID"
+    fail_test "Server unreachable at $MCP_ENDPOINT"
+    echo "  Raw response: $resp" | head -5
 fi
-pass "Initialize completed"
-
-# ── 02. Initialized notification ───────────────────────────────────────────
-
-echo ""
-echo "━━━ [02] INITIALIZED ━━━"
-SESS_PARAM=""
-[ -n "$SESSION_ID" ] && SESS_PARAM="?mcp-session-id=$SESSION_ID"
-curl -s -X POST "${MCP_ENDPOINT}${SESS_PARAM}" \
-    -H "Content-Type: application/json" \
-    -d '{"jsonrpc":"2.0","method":"notifications/initialized"}' > /dev/null 2>&1 || true
-pass "Initialized notification sent"
 
 # ── 03. Index documents ────────────────────────────────────────────────────
 
 echo ""
-echo "━━━ [03] INDEX SPEC (payment-gateway) ━━━"
+echo "━━━ [02] INDEX SPEC (payment-gateway) ━━━"
 resp=$(call_tool "index_document" 3 '{"path":"scripts/data/spec-payment-gateway.md"}')
 if echo "$resp" | has_error; then
     fail_test "index_document payment-gateway returned error"
@@ -89,7 +82,7 @@ else
 fi
 
 echo ""
-echo "━━━ [04] INDEX SPEC (user-auth) ━━━"
+echo "━━━ [03] INDEX SPEC (user-auth) ━━━"
 resp=$(call_tool "index_document" 4 '{"path":"scripts/data/spec-user-auth.md"}')
 if echo "$resp" | has_error; then
     fail_test "index_document user-auth returned error"
@@ -104,7 +97,7 @@ else
 fi
 
 echo ""
-echo "━━━ [05] INDEX ARCHITECTURE (payments) ━━━"
+echo "━━━ [04] INDEX ARCHITECTURE (payments) ━━━"
 resp=$(call_tool "index_document" 5 '{"path":"scripts/data/architecture-payments.md"}')
 if echo "$resp" | has_error; then
     fail_test "index_document architecture-payments returned error"
@@ -118,7 +111,7 @@ else
 fi
 
 echo ""
-echo "━━━ [06] INDEX ADR (database-choice) ━━━"
+echo "━━━ [05] INDEX ADR (database-choice) ━━━"
 resp=$(call_tool "index_document" 6 '{"path":"scripts/data/adr-database-choice.md"}')
 if echo "$resp" | has_error; then
     fail_test "index_document adr-database-choice returned error"
@@ -132,7 +125,7 @@ else
 fi
 
 echo ""
-echo "━━━ [07] INDEX CHARTER (payments-team) ━━━"
+echo "━━━ [06] INDEX CHARTER (payments-team) ━━━"
 resp=$(call_tool "index_document" 7 '{"path":"scripts/data/charter-payments-team.md"}')
 if echo "$resp" | has_error; then
     fail_test "index_document charter-payments-team returned error"
@@ -146,7 +139,7 @@ else
 fi
 
 echo ""
-echo "━━━ [08] INDEX SUPERSEDED SPEC (deprecated-feature) ━━━"
+echo "━━━ [07] INDEX SUPERSEDED SPEC (deprecated-feature) ━━━"
 resp=$(call_tool "index_document" 8 '{"path":"scripts/data/spec-deprecated-feature.md"}')
 if echo "$resp" | has_error; then
     fail_test "index_document spec-deprecated-feature returned error"
@@ -161,7 +154,7 @@ else
 fi
 
 echo ""
-echo "━━━ [09] INDEX NONEXISTENT FILE (expect error) ━━━"
+echo "━━━ [08] INDEX NONEXISTENT FILE (expect error) ━━━"
 resp=$(call_tool "index_document" 9 '{"path":"scripts/data/nonexistent-file.md"}')
 if echo "$resp" | has_error; then
     pass "Correctly rejected nonexistent file"
@@ -172,7 +165,7 @@ fi
 # ── 04. List active ────────────────────────────────────────────────────────
 
 echo ""
-echo "━━━ [10] LIST ACTIVE (no filters) ━━━"
+echo "━━━ [09] LIST ACTIVE (no filters) ━━━"
 resp=$(call_tool "list_active" 10 '{}')
 if echo "$resp" | has_error; then
     fail_test "list_active returned error"
@@ -190,7 +183,7 @@ else
 fi
 
 echo ""
-echo "━━━ [11] LIST ACTIVE (type=spec) ━━━"
+echo "━━━ [10] LIST ACTIVE (type=spec) ━━━"
 resp=$(call_tool "list_active" 11 '{"type":"spec"}')
 count=$(echo "$resp" | inner | jq 'length')
 if [ "$count" -ge 2 ]; then
@@ -209,7 +202,7 @@ else
 fi
 
 echo ""
-echo "━━━ [12] LIST ACTIVE (domain=payments) ━━━"
+echo "━━━ [11] LIST ACTIVE (domain=payments) ━━━"
 resp=$(call_tool "list_active" 12 '{"domain":"payments"}')
 count=$(echo "$resp" | inner | jq 'length')
 if [ "$count" -ge 3 ]; then
@@ -221,7 +214,7 @@ else
 fi
 
 echo ""
-echo "━━━ [13] LIST ACTIVE (type=architecture, domain=payments) ━━━"
+echo "━━━ [12] LIST ACTIVE (type=architecture, domain=payments) ━━━"
 resp=$(call_tool "list_active" 13 '{"type":"architecture","domain":"payments"}')
 count=$(echo "$resp" | inner | jq 'length')
 if [ "$count" -ge 1 ]; then
@@ -239,7 +232,7 @@ fi
 # ── 05. Search ─────────────────────────────────────────────────────────────
 
 echo ""
-echo "━━━ [14] SEARCH (payment gateway integration) ━━━"
+echo "━━━ [13] SEARCH (payment gateway integration) ━━━"
 resp=$(call_tool "search" 14 '{"query":"payment gateway integration"}')
 hits=$(echo "$resp" | inner | jq 'length')
 if [ "$hits" -gt 0 ]; then
@@ -251,7 +244,7 @@ else
 fi
 
 echo ""
-echo "━━━ [15] SEARCH (database choice) ━━━"
+echo "━━━ [14] SEARCH (database choice) ━━━"
 resp=$(call_tool "search" 15 '{"query":"database choice PostgreSQL"}')
 hits=$(echo "$resp" | inner | jq 'length')
 if [ "$hits" -gt 0 ]; then
@@ -266,7 +259,7 @@ else
 fi
 
 echo ""
-echo "━━━ [16] SEARCH WITH TYPE FILTER (type=adr, query=database) ━━━"
+echo "━━━ [15] SEARCH WITH TYPE FILTER (type=adr, query=database) ━━━"
 resp=$(call_tool "search" 16 '{"query":"database","type":"adr"}')
 hits=$(echo "$resp" | inner | jq 'length')
 all_adr=$(echo "$resp" | inner | jq -r '[.[].type] | unique | length')
@@ -282,7 +275,7 @@ else
 fi
 
 echo ""
-echo "━━━ [17] SEARCH WITH DOMAIN FILTER (domain=auth) ━━━"
+echo "━━━ [16] SEARCH WITH DOMAIN FILTER (domain=auth) ━━━"
 resp=$(call_tool "search" 17 '{"query":"authentication login","domain":"auth"}')
 hits=$(echo "$resp" | inner | jq 'length')
 if [ "$hits" -gt 0 ]; then
@@ -297,7 +290,7 @@ else
 fi
 
 echo ""
-echo "━━━ [18] SEARCH DEPRECATED (include_deprecated=false) ━━━"
+echo "━━━ [17] SEARCH DEPRECATED (include_deprecated=false) ━━━"
 resp=$(call_tool "search" 18 '{"query":"legacy batch processing","include_deprecated":false}')
 hits=$(echo "$resp" | inner | jq 'length')
 found_deprecated=$(echo "$resp" | inner | jq -r '[.[] | select(.path == "scripts/data/spec-deprecated-feature.md")] | length')
@@ -308,7 +301,7 @@ else
 fi
 
 echo ""
-echo "━━━ [19] SEARCH DEPRECATED (include_deprecated=true) ━━━"
+echo "━━━ [18] SEARCH DEPRECATED (include_deprecated=true) ━━━"
 resp=$(call_tool "search" 19 '{"query":"legacy batch processing","include_deprecated":true}')
 hits=$(echo "$resp" | inner | jq 'length')
 found_deprecated=$(echo "$resp" | inner | jq -r '[.[] | select(.path == "scripts/data/spec-deprecated-feature.md")] | length')
@@ -322,7 +315,7 @@ fi
 # ── 06. Get content ────────────────────────────────────────────────────────
 
 echo ""
-echo "━━━ [20] GET CONTENT (spec-payment-gateway.md) ━━━"
+echo "━━━ [19] GET CONTENT (spec-payment-gateway.md) ━━━"
 resp=$(call_tool "get_content" 20 '{"path":"scripts/data/spec-payment-gateway.md"}')
 if echo "$resp" | has_error; then
     fail_test "get_content returned error"
@@ -337,7 +330,7 @@ else
 fi
 
 echo ""
-echo "━━━ [21] GET CONTENT (nonexistent file) ━━━"
+echo "━━━ [20] GET CONTENT (nonexistent file) ━━━"
 resp=$(call_tool "get_content" 21 '{"path":"scripts/data/nonexistent-file.md"}')
 if echo "$resp" | has_error; then
     pass "Correctly rejected request for nonexistent file"
@@ -348,7 +341,7 @@ fi
 # ── 07. Mark deleted ───────────────────────────────────────────────────────
 
 echo ""
-echo "━━━ [22] MARK DELETED (spec-deprecated-feature.md) ━━━"
+echo "━━━ [21] MARK DELETED (spec-deprecated-feature.md) ━━━"
 resp=$(call_tool "mark_deleted" 22 '{"path":"scripts/data/spec-deprecated-feature.md"}')
 if echo "$resp" | has_error; then
     fail_test "mark_deleted returned error"
@@ -363,7 +356,7 @@ else
 fi
 
 echo ""
-echo "━━━ [23] LIST ACTIVE AFTER DELETION ━━━"
+echo "━━━ [22] LIST ACTIVE AFTER DELETION ━━━"
 resp=$(call_tool "list_active" 23 '{}')
 if echo "$resp" | has_error; then
     fail_test "list_active returned error after deletion"
@@ -377,7 +370,7 @@ else
 fi
 
 echo ""
-echo "━━━ [24] SEARCH DELETED (include_deprecated=true) ━━━"
+echo "━━━ [23] SEARCH DELETED (include_deprecated=true) ━━━"
 resp=$(call_tool "search" 24 '{"query":"legacy batch processing","include_deprecated":true}')
 found_deleted=$(echo "$resp" | inner | jq -r '[.[] | select(.path == "scripts/data/spec-deprecated-feature.md")] | length')
 if [ "$found_deleted" -gt 0 ]; then
@@ -392,7 +385,7 @@ else
 fi
 
 echo ""
-echo "━━━ [25] MARK DELETED FOR NONEXISTENT ━━━"
+echo "━━━ [24] MARK DELETED FOR NONEXISTENT ━━━"
 resp=$(call_tool "mark_deleted" 25 '{"path":"scripts/data/nonexistent-file.md"}')
 if echo "$resp" | has_error; then
     pass "Correctly rejected mark_deleted for nonexistent/unindexed file"
