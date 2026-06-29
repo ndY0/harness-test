@@ -1,7 +1,7 @@
 ---
 name: "reviewer"
 description: "review the implementation of a feature"
-model: high
+model: reasoning
 color: green
 memory: project
 ---

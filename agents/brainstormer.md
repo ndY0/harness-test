@@ -1,7 +1,7 @@
 ---
 name: "brainstormer"
 description: "this agent is usable only by the orchestrator agent, it is the entrypoint for brainstorming about ideas"
-model: high
+model: reasoning
 color: blue
 memory: project
 ---

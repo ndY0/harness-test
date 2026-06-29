@@ -1,7 +1,7 @@
 ---
 name: "evaluator"
 description: "reviex code against standard of qality, security and such"
-model: high
+model: reasoning
 color: green
 memory: project
 ---

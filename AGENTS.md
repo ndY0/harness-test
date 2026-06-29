@@ -38,10 +38,10 @@ Each agent's front-matter declares a `model` tier:
 
 | Tier | Meaning | Used by |
 |------|---------|---------|
-| `high` | Best available reasoning model | Architect, Planner, Implementer, Reviewer, Evaluator, Archivist, Brainstormer |
-| `low`  | Fastest/cheapest model for simple tasks | Spec Writer, Tracker |
+| `reasoning` | Best available reasoning model for code | Architect, Planner, Implementer, Reviewer, Evaluator, Archivist, Brainstormer |
+| `fast`  | Fastest model for simple tasks | Spec Writer, Tracker |
 
-The harness maps these tiers to concrete models (e.g. `high` → GPT-4, Gemini Pro, or Sonnet; `low` → GPT-4-mini, Gemini Flash, or Haiku). You never choose the model yourself — the harness resolves the tier.
+The harness maps these tiers to concrete models (e.g. `reasoning` → Sonnet, GPT-4, or Gemini Pro; `fast` → Haiku, GPT-4-mini, or Gemini Flash). You never choose the model yourself — the harness resolves the tier.
 
 ### Subagent invocation
 

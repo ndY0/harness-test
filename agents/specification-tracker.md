@@ -1,7 +1,7 @@
 ---
 name: "spec-tracker"
 description: "track the specifications status, choose what to implement next"
-model: low
+model: fast
 color: blue
 memory: project
 ---

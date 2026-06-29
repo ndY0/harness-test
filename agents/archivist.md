@@ -1,7 +1,7 @@
 ---
 name: "archivist"
 description: "maintain boundary between active inforamtion and history"
-model: high
+model: reasoning
 color: brown
 memory: project
 ---
