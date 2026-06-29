@@ -1,6 +1,9 @@
+#![allow(clippy::needless_range_loop)]
+
 use crate::maze::Tile;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct LevelConfig {
     pub width: usize,
     pub height: usize,
@@ -175,7 +178,7 @@ fn make_level_4() -> LevelConfig {
     // Diamond-shaped walls
     for i in 0..8 {
         for x in (15 - i)..=(15 + i) {
-            if 8 + i < 23 && x >= 8 && x <= 22 {
+            if 8 + i < 23 && (8..=22).contains(&x) {
                 tiles[8 + i][x] = W;
                 tiles[22 - i][x] = W;
             }
@@ -463,10 +466,10 @@ fn make_level_10() -> LevelConfig {
     // Tight maze - many wall segments
     for y in 1..30 {
         for x in 1..30 {
-            if (x % 3 == 0 && y % 3 == 0) || (x % 4 == 1 && y % 4 == 1) {
-                if (x, y) != (15, 15) {
-                    tiles[y][x] = W;
-                }
+            if ((x % 3 == 0 && y % 3 == 0) || (x % 4 == 1 && y % 4 == 1))
+                && (x, y) != (15, 15)
+            {
+                tiles[y][x] = W;
             }
         }
     }
@@ -522,7 +525,7 @@ static LEVELS: LazyLock<[LevelConfig; 10]> = LazyLock::new(|| [
 ]);
 
 pub fn get_level_config(level: u8) -> &'static LevelConfig {
-    assert!(level >= 1 && level <= 10, "level out of bounds");
+    assert!((1..=10).contains(&level), "level out of bounds");
     &LEVELS[(level - 1) as usize]
 }
 

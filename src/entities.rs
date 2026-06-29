@@ -3,7 +3,9 @@ use crate::maze::{Direction, MazeGrid, Tile, is_wall};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PacManState {
     Alive,
+    #[allow(dead_code)]
     Dying(u8),
+    #[allow(dead_code)]
     Respawning,
 }
 
@@ -44,6 +46,7 @@ pub enum GhostPersonality {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GhostMode {
     Chase,
+    #[allow(dead_code)]
     Scatter,
     Frightened(u32),
     Eaten,
@@ -55,6 +58,7 @@ pub struct Ghost {
     pub dir: Direction,
     pub personality: GhostPersonality,
     pub mode: GhostMode,
+    #[allow(dead_code)]
     pub spawn: (usize, usize),
     pub tick_counter: u8,
 }
@@ -71,6 +75,7 @@ impl Ghost {
         }
     }
 
+    #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.pos = self.spawn;
         self.dir = Direction::Up;
@@ -83,6 +88,7 @@ impl Ghost {
 pub enum CollisionEvent {
     GhostContact,
     GhostEaten,
+    #[allow(dead_code)]
     None,
 }
 
@@ -91,6 +97,7 @@ pub enum MoveResult {
     Moved((usize, usize)),
     Blocked,
     PortalTeleport((usize, usize)),
+    #[allow(dead_code)]
     Dying,
 }
 
@@ -105,12 +112,12 @@ pub fn move_pacman(pacman: &mut PacMan, maze: &MazeGrid) -> MoveResult {
         let (dx, dy) = pacman.next_dir.delta();
         let nx = pacman.pos.0 as isize + dx;
         let ny = pacman.pos.1 as isize + dy;
-        if nx >= 0 && ny >= 0 && nx < 31 && ny < 31 {
-            if !is_wall(maze, (nx as usize, ny as usize)) {
-                dir = pacman.next_dir;
-                pacman.dir = dir;
-                pacman.next_dir = Direction::None;
-            }
+        if nx >= 0 && ny >= 0 && nx < 31 && ny < 31
+            && !is_wall(maze, (nx as usize, ny as usize))
+        {
+            dir = pacman.next_dir;
+            pacman.dir = dir;
+            pacman.next_dir = Direction::None;
         }
     }
 
@@ -162,6 +169,7 @@ pub fn check_collisions(pacman: &PacMan, ghosts: &[Ghost]) -> Vec<CollisionEvent
     events
 }
 
+#[allow(dead_code)]
 pub fn wrap_direction(d: Direction) -> Direction {
     match d {
         Direction::Up => Direction::Down,
@@ -177,6 +185,7 @@ mod tests {
     use super::*;
     use crate::maze::Tile;
 
+    #[allow(clippy::needless_range_loop)]
     fn simple_maze() -> MazeGrid {
         let mut tiles = [[Tile::Wall; 31]; 31];
         for y in 1..30 {

@@ -5,7 +5,9 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 pub enum Action {
     Move(Direction),
     Select,
+    #[allow(dead_code)]
     Up,
+    #[allow(dead_code)]
     Down,
     Quit,
     Pause,

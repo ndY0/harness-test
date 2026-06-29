@@ -1,4 +1,4 @@
-use crate::maze::{Direction, MazeGrid, Tile};
+use crate::maze::{MazeGrid, Tile};
 use crate::entities::{Ghost, GhostMode, GhostPersonality, PacMan, PacManState};
 use crate::scoreboard::ScoreEntry;
 use ratatui::{
@@ -88,18 +88,22 @@ pub fn render_high_scores(frame: &mut Frame, area: Rect, entries: &[ScoreEntry])
     frame.render_widget(paragraph, centered_area);
 }
 
+pub struct RenderContext<'a> {
+    pub maze: &'a MazeGrid,
+    pub pacman: &'a PacMan,
+    pub ghosts: &'a [Ghost],
+    pub score: u32,
+    pub lives: u8,
+    pub level: u8,
+    pub fruit_active: bool,
+    pub fruit_pos: Option<(usize, usize)>,
+    pub power_pellet_flash: bool,
+}
+
 pub fn render_game(
     frame: &mut Frame,
     area: Rect,
-    maze: &MazeGrid,
-    pacman: &PacMan,
-    ghosts: &[Ghost],
-    score: u32,
-    lives: u8,
-    level: u8,
-    fruit_active: bool,
-    fruit_pos: Option<(usize, usize)>,
-    power_pellet_flash: bool,
+    ctx: &RenderContext,
 ) {
     let hud_height = 1;
 
@@ -113,15 +117,15 @@ pub fn render_game(
 
     let hud_text = Line::from(vec![
         Span::styled(
-            format!("SCORE: {}  ", score),
+            format!("SCORE: {}  ", ctx.score),
             Style::default().fg(Color::White),
         ),
         Span::styled(
-            format!("LIVES: {}  ", "♥".repeat(lives as usize)),
+            format!("LIVES: {}  ", "♥".repeat(ctx.lives as usize)),
             Style::default().fg(Color::Red),
         ),
         Span::styled(
-            format!("LEVEL: {}", level),
+            format!("LEVEL: {}", ctx.level),
             Style::default().fg(Color::Yellow),
         ),
     ]);
@@ -150,16 +154,16 @@ pub fn render_game(
                 continue;
             }
 
-            let tile = maze.tiles[y][x];
-            let consumed = maze.consumed[y][x];
+            let tile = ctx.maze.tiles[y][x];
+            let consumed = ctx.maze.consumed[y][x];
 
             // Check if entity occupies this cell
             let mut entity_rendered = false;
 
             // Check ghosts
-            for ghost in ghosts {
+            for ghost in ctx.ghosts {
                 if ghost.pos == (x, y) {
-                    let (glyph, color) = ghost_glyph(ghost, power_pellet_flash);
+                    let (glyph, color) = ghost_glyph(ghost, ctx.power_pellet_flash);
                     render_cell(frame, cell_x, cell_y, glyph, color);
                     entity_rendered = true;
                     break;
@@ -167,14 +171,14 @@ pub fn render_game(
             }
 
             // Check Pac-Man
-            if !entity_rendered && pacman.pos == (x, y) && pacman.state == PacManState::Alive {
+            if !entity_rendered && ctx.pacman.pos == (x, y) && ctx.pacman.state == PacManState::Alive {
                 render_cell(frame, cell_x, cell_y, "●", Color::Yellow);
                 entity_rendered = true;
             }
 
             // Check fruit
-            if !entity_rendered && fruit_active {
-                if let Some(fpos) = fruit_pos {
+            if !entity_rendered && ctx.fruit_active {
+                if let Some(fpos) = ctx.fruit_pos {
                     if fpos == (x, y) {
                         render_cell(frame, cell_x, cell_y, "♠", Color::Red);
                         entity_rendered = true;
@@ -327,7 +331,7 @@ pub fn render_pause_overlay(frame: &mut Frame, area: Rect) {
 
     let centered_area = centered_rect(area, 30, 6);
     frame.render_widget(
-        ratatui::widgets::Clear::default(),
+        ratatui::widgets::Clear,
         centered_area,
     );
     frame.render_widget(paragraph, centered_area);
@@ -367,6 +371,7 @@ fn centered_rect(r: Rect, width: u16, height: u16) -> Rect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::maze::Direction;
 
     #[test]
     fn test_ghost_glyph_blinky() {

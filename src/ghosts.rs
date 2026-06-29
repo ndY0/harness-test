@@ -1,6 +1,6 @@
 use crate::maze::{Direction, MazeGrid, is_wall};
 use crate::entities::{
-    Ghost, GhostMode, GhostPersonality, PacMan, PacManState,
+    Ghost, GhostMode, GhostPersonality, PacMan,
 };
 use rand::Rng;
 
@@ -8,6 +8,7 @@ use rand::Rng;
 pub enum GhostEvent {
     Moved(usize),
     ReachedLair(usize),
+    #[allow(dead_code)]
     None,
 }
 
@@ -123,7 +124,7 @@ fn ghost_direction(
 
 fn random_direction(pos: (usize, usize), maze: &MazeGrid, rng: &mut impl Rng) -> Direction {
     let dirs = [Direction::Up, Direction::Down, Direction::Left, Direction::Right];
-    let mut valid: Vec<Direction> = dirs.iter()
+    let valid: Vec<Direction> = dirs.iter()
         .filter(|&&dir| {
             let (dx, dy) = dir.delta();
             let nx = pos.0 as isize + dx;
@@ -235,6 +236,7 @@ pub fn exit_frightened_mode(ghosts: &mut [Ghost]) {
     }
 }
 
+#[allow(dead_code)]
 pub fn is_ghost_in_lair(ghost: &Ghost, lair_pos: (usize, usize)) -> bool {
     ghost.pos == lair_pos
 }
@@ -245,6 +247,7 @@ mod tests {
     use crate::maze::Tile;
     use crate::entities::{Ghost, GhostMode, GhostPersonality, PacMan};
 
+    #[allow(clippy::needless_range_loop)]
     fn test_maze() -> MazeGrid {
         let mut tiles = [[Tile::Wall; 31]; 31];
         for y in 1..30 {
@@ -335,6 +338,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::needless_range_loop)]
     fn test_ghost_blocked_by_wall() {
         let mut tiles = [[Tile::Wall; 31]; 31];
         for y in 1..30 {
@@ -360,7 +364,7 @@ mod tests {
             },
         ];
         let pacman = PacMan::new((20, 20));
-        let events = move_ghosts(&mut ghosts, &maze, &pacman, (10, 10), (15, 15));
+        let _events = move_ghosts(&mut ghosts, &maze, &pacman, (10, 10), (15, 15));
         // Ghost trapped in 1x1 cell
         assert_eq!(ghosts[0].pos, (10, 10));
     }
@@ -407,9 +411,9 @@ mod tests {
         let lair = (15, 15);
         move_ghosts(&mut ghosts, &maze, &pacman, (20, 20), lair);
         // Should move toward lair
-        let dist_after = ((ghosts[0].pos.0 as i64 - lair.0 as i64).abs() +
-                          (ghosts[0].pos.1 as i64 - lair.1 as i64).abs());
-        let dist_before = ((20i64 - lair.0 as i64).abs() + (20i64 - lair.1 as i64).abs());
+        let dist_after = (ghosts[0].pos.0 as i64 - lair.0 as i64).abs() +
+                          (ghosts[0].pos.1 as i64 - lair.1 as i64).abs();
+        let dist_before = (20i64 - lair.0 as i64).abs() + (20i64 - lair.1 as i64).abs();
         assert!(dist_after < dist_before);
     }
 

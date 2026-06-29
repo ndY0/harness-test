@@ -1,8 +1,8 @@
 use crate::maze::{
-    MazeGrid, Tile, Direction, consume_dot, consume_fruit, dots_remaining,
-    is_wall, teleport_portal,
+    MazeGrid, Direction, consume_dot, dots_remaining,
+    teleport_portal,
 };
-use crate::levels::{LevelConfig, get_level_config};
+use crate::levels::get_level_config;
 use crate::entities::{
     PacMan, PacManState, Ghost, GhostMode, GhostPersonality,
     CollisionEvent, MoveResult, move_pacman, check_collisions,
@@ -14,11 +14,12 @@ use crate::input::{Action, poll_input, check_resize};
 use crate::render::{
     render_menu, render_game, render_high_scores, render_game_over,
     render_victory, render_pause_overlay, render_terminal_too_small,
+    RenderContext,
 };
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::ExecutableCommand;
 use ratatui::{Terminal, backend::CrosstermBackend};
-use std::io::{self, stdout, Stdout};
+use std::io::{self, stdout};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +47,7 @@ pub struct GameState {
     pub menu_selected: usize,
     pub high_scores: Vec<ScoreEntry>,
     pub name_input: String,
+    #[allow(dead_code)]
     pub show_high_scores: bool,
     pub tick_count: u64,
 }
@@ -249,22 +251,21 @@ pub fn run_app() -> Result<(), String> {
                 // Determine power pellet flash
                 let flash = state.power_pellet_timer > 0
                     && state.power_pellet_timer <= 14  // ~2000ms / 150ms ≈ 13.3 ticks
-                    && (state.power_pellet_timer / 2) % 2 == 0;
+                    && (state.power_pellet_timer / 2).is_multiple_of(2);
 
                 terminal.draw(|f| {
-                    render_game(
-                        f,
-                        f.area(),
-                        &state.maze,
-                        &state.pacman,
-                        &state.ghosts,
-                        state.score.score,
-                        state.score.lives,
-                        state.level,
-                        state.fruit_active,
-                        state.fruit_pos,
-                        flash,
-                    );
+                    let ctx = RenderContext {
+                        maze: &state.maze,
+                        pacman: &state.pacman,
+                        ghosts: &state.ghosts,
+                        score: state.score.score,
+                        lives: state.score.lives,
+                        level: state.level,
+                        fruit_active: state.fruit_active,
+                        fruit_pos: state.fruit_pos,
+                        power_pellet_flash: flash,
+                    };
+                    render_game(f, f.area(), &ctx);
                 }).map_err(|e| format!("{}", e))?;
             }
 
@@ -282,19 +283,18 @@ pub fn run_app() -> Result<(), String> {
                     }).map_err(|e| format!("{}", e))?;
                 } else {
                     terminal.draw(|f| {
-                        render_game(
-                            f,
-                            f.area(),
-                            &state.maze,
-                            &state.pacman,
-                            &state.ghosts,
-                            state.score.score,
-                            state.score.lives,
-                            state.level,
-                            state.fruit_active,
-                            state.fruit_pos,
-                            false,
-                        );
+                        let ctx = RenderContext {
+                            maze: &state.maze,
+                            pacman: &state.pacman,
+                            ghosts: &state.ghosts,
+                            score: state.score.score,
+                            lives: state.score.lives,
+                            level: state.level,
+                            fruit_active: state.fruit_active,
+                            fruit_pos: state.fruit_pos,
+                            power_pellet_flash: false,
+                        };
+                        render_game(f, f.area(), &ctx);
                         render_pause_overlay(f, f.area());
                     }).map_err(|e| format!("{}", e))?;
                 }
@@ -310,7 +310,7 @@ pub fn run_app() -> Result<(), String> {
                         }
                         Action::Input(c) => {
                             let upper = c.to_ascii_uppercase();
-                            if (upper >= 'A' && upper <= 'Z') || (upper >= '0' && upper <= '9') {
+                            if upper.is_ascii_uppercase() || upper.is_ascii_digit() {
                                 state.name_input.push(upper);
                             }
                         }
@@ -400,17 +400,17 @@ fn tick_game(state: &mut GameState) {
 
     // Process tile consumption
     match consume_dot(&mut state.maze, state.pacman.pos) {
-        crate::maze::TileEffect::Dot(points) => {
+        crate::maze::TileEffect::Dot(_points) => {
             add_points(&mut state.score, ScoreEvent::Dot);
             check_fruit_spawn(state);
         }
-        crate::maze::TileEffect::PowerPellet(points) => {
+        crate::maze::TileEffect::PowerPellet(_points) => {
             add_points(&mut state.score, ScoreEvent::PowerPellet);
             let cfg = get_level_config(state.level);
             let fright_ticks = cfg.fright_duration_ms / 150; // convert ms to ticks
-            enter_frightened_mode(&mut state.ghosts, fright_ticks as u32);
+            enter_frightened_mode(&mut state.ghosts, fright_ticks);
             reset_ghost_eat_chain(&mut state.score);
-            state.power_pellet_timer = fright_ticks as u32;
+            state.power_pellet_timer = fright_ticks;
             check_fruit_spawn(state);
         }
         _ => {}
@@ -567,7 +567,7 @@ mod tests {
 
         state.fruit_spawned = [false, false];
         // Remove all but 171 dots
-        let remaining = dots_remaining(&state.maze);
+        let _remaining = dots_remaining(&state.maze);
         // consume almost all dots
         // This test just verifies the function doesn't panic
         check_fruit_spawn(&mut state);

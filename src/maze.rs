@@ -43,6 +43,7 @@ pub enum TileEffect {
     Dot(u32),
     PowerPellet(u32),
     Portal(usize),
+    #[allow(dead_code)]
     Fruit(u32),
     Empty,
     Wall,
@@ -112,6 +113,7 @@ pub fn consume_dot(grid: &mut MazeGrid, pos: (usize, usize)) -> TileEffect {
     }
 }
 
+#[allow(dead_code)]
 pub fn consume_fruit(grid: &mut MazeGrid) -> Option<u32> {
     if grid.fruit_pos.is_some() {
         let value = grid.fruit_value;
@@ -143,6 +145,7 @@ pub fn teleport_portal(grid: &MazeGrid, pos: (usize, usize)) -> Option<(usize, u
 mod tests {
     use super::*;
 
+    #[allow(clippy::needless_range_loop)]
     fn make_grid() -> MazeGrid {
         let mut tiles = [[Tile::Wall; 31]; 31];
         for y in 1..30 {

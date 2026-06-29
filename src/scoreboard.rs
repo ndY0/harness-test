@@ -79,7 +79,7 @@ pub fn is_top_10(entries: &[ScoreEntry], score: u32) -> bool {
 
 pub fn insert_score(entries: &mut Vec<ScoreEntry>, entry: ScoreEntry) {
     entries.push(entry);
-    entries.sort_by(|a, b| b.score.cmp(&a.score));
+    entries.sort_by_key(|b| std::cmp::Reverse(b.score));
     entries.truncate(10);
 }
 
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn test_is_top_10_empty() {
-        assert!(is_top_10(&vec![], 0));
+        assert!(is_top_10(&[], 0));
     }
 
     #[test]
