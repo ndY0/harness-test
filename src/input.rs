@@ -9,6 +9,7 @@ pub enum Action {
     Down,
     Quit,
     Pause,
+    Input(char),
     None,
 }
 
@@ -31,6 +32,7 @@ pub fn poll_input() -> Action {
                 KeyCode::Esc => Action::Quit,
                 KeyCode::Char('q') => Action::Quit,
                 KeyCode::Char('p') => Action::Pause,
+                KeyCode::Char(c) => Action::Input(c),
                 _ => Action::None,
             }
         }
