@@ -34,7 +34,7 @@ class RustPlugin(LanguagePlugin):
 
     @property
     def exclude_dirs(self) -> list[str]:
-        return [".git", "target", ".worktrees"]
+        return [".git", "target"]
 
     @property
     def lsp_init_options(self) -> dict:

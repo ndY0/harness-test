@@ -71,7 +71,7 @@ class JavaPlugin(LanguagePlugin):
 
     @property
     def exclude_dirs(self) -> list[str]:
-        return [".git", "target", "build", ".gradle", ".worktrees"]
+        return [".git", "target", "build", ".gradle"]
 
     @property
     def lsp_init_options(self) -> dict:

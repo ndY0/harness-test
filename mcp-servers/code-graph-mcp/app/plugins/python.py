@@ -49,7 +49,7 @@ class PythonPlugin(LanguagePlugin):
     def exclude_dirs(self) -> list[str]:
         return [
             ".git", "__pycache__", ".venv", "venv", "env",
-            ".tox", "dist", "build", "*.egg-info", ".worktrees",
+            ".tox", "dist", "build", "*.egg-info",
         ]
 
     @property
