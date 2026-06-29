@@ -1,7 +1,7 @@
 ---
 name: "architect"
 description: "this agent is thearchitect. it design the technical solution"
-model: sonnet
+model: high
 color: blue
 memory: project
 ---

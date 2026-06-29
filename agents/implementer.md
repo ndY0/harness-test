@@ -1,7 +1,7 @@
 ---
 name: "implementer"
 description: "this agent is responsible for implementing a feature"
-model: sonnet
+model: high
 color: red
 memory: project
 ---

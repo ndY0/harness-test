@@ -1,7 +1,7 @@
 ---
 name: "planner"
 description: "plan complex implementations and delegate to implementers"
-model: sonnet
+model: high
 color: red
 memory: project
 ---

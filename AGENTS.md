@@ -32,6 +32,17 @@ You route, track, and mediate.
 
 ## Dispatch rules
 
+### Model tiers
+
+Each agent's front-matter declares a `model` tier:
+
+| Tier | Meaning | Used by |
+|------|---------|---------|
+| `high` | Best available reasoning model | Architect, Planner, Implementer, Reviewer, Evaluator, Archivist, Brainstormer |
+| `low`  | Fastest/cheapest model for simple tasks | Spec Writer, Tracker |
+
+The harness maps these tiers to concrete models (e.g. `high` → GPT-4, Gemini Pro, or Sonnet; `low` → GPT-4-mini, Gemini Flash, or Haiku). You never choose the model yourself — the harness resolves the tier.
+
 ### Subagent invocation
 
 You dispatch specialist agents by spawning a **subagent** (a `task` or

@@ -1,7 +1,7 @@
 ---
 name: "reviewer"
 description: "review the implementation of a feature"
-model: sonnet
+model: high
 color: green
 memory: project
 ---
