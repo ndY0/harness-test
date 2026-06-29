@@ -1,24 +1,22 @@
-use crate::maze::{
-    MazeGrid, Direction, consume_dot, dots_remaining,
-    teleport_portal,
-};
-use crate::levels::get_level_config;
 use crate::entities::{
-    PacMan, PacManState, Ghost, GhostMode, GhostPersonality,
-    CollisionEvent, MoveResult, move_pacman, check_collisions,
+    check_collisions, move_pacman, CollisionEvent, Ghost, GhostMode, GhostPersonality, MoveResult,
+    PacMan, PacManState,
 };
-use crate::ghosts::{GhostEvent, move_ghosts, enter_frightened_mode, exit_frightened_mode};
-use crate::scoring::{Score, ScoreEvent, add_points, lose_life, reset_ghost_eat_chain, fruit_value};
-use crate::scoreboard::{ScoreEntry, load_scores, save_scores, is_top_10, insert_score};
-use crate::input::{Action, poll_input, check_resize};
+use crate::ghosts::{enter_frightened_mode, exit_frightened_mode, move_ghosts, GhostEvent};
+use crate::input::{check_resize, poll_input, Action};
+use crate::levels::get_level_config;
+use crate::maze::{consume_dot, dots_remaining, teleport_portal, Direction, MazeGrid};
 use crate::render::{
-    render_menu, render_game, render_high_scores, render_game_over,
-    render_victory, render_pause_overlay, render_terminal_too_small,
-    RenderContext,
+    render_game, render_game_over, render_high_scores, render_menu, render_pause_overlay,
+    render_terminal_too_small, render_victory, RenderContext,
+};
+use crate::scoreboard::{insert_score, is_top_10, load_scores, save_scores, ScoreEntry};
+use crate::scoring::{
+    add_points, fruit_value, lose_life, reset_ghost_eat_chain, Score, ScoreEvent,
 };
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::ExecutableCommand;
-use ratatui::{Terminal, backend::CrosstermBackend};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io::{self, stdout};
 use std::time::{Duration, Instant};
 
@@ -144,7 +142,9 @@ pub fn run_app() -> Result<(), String> {
     }));
 
     let mut stdout = stdout();
-    stdout.execute(EnterAlternateScreen).map_err(|e| format!("{}", e))?;
+    stdout
+        .execute(EnterAlternateScreen)
+        .map_err(|e| format!("{}", e))?;
 
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend).map_err(|e| format!("{}", e))?;
@@ -173,9 +173,11 @@ pub fn run_app() -> Result<(), String> {
         match state.state {
             AppState::Menu => {
                 if too_small {
-                    terminal.draw(|f| {
-                        render_terminal_too_small(f, f.area());
-                    }).map_err(|e| format!("{}", e))?;
+                    terminal
+                        .draw(|f| {
+                            render_terminal_too_small(f, f.area());
+                        })
+                        .map_err(|e| format!("{}", e))?;
                     std::thread::sleep(tick_duration);
                     continue;
                 }
@@ -187,42 +189,46 @@ pub fn run_app() -> Result<(), String> {
                     Action::Move(Direction::Down) | Action::Down => {
                         state.menu_selected = (state.menu_selected + 1).min(2);
                     }
-                    Action::Select => {
-                        match state.menu_selected {
-                            0 => {
-                                state.state = AppState::Playing;
-                                state.reset_level();
-                            }
-                            1 => {
-                                state.state = AppState::HighScores;
-                            }
-                            2 => break,
-                            _ => {}
+                    Action::Select => match state.menu_selected {
+                        0 => {
+                            state.state = AppState::Playing;
+                            state.reset_level();
                         }
-                    }
+                        1 => {
+                            state.state = AppState::HighScores;
+                        }
+                        2 => break,
+                        _ => {}
+                    },
                     _ => {}
                 }
 
-                terminal.draw(|f| {
-                    render_menu(f, f.area(), state.menu_selected);
-                }).map_err(|e| format!("{}", e))?;
+                terminal
+                    .draw(|f| {
+                        render_menu(f, f.area(), state.menu_selected);
+                    })
+                    .map_err(|e| format!("{}", e))?;
             }
 
             AppState::HighScores => {
                 if action == Action::Quit || action == Action::Select {
                     state.state = AppState::Menu;
                 }
-                terminal.draw(|f| {
-                    render_high_scores(f, f.area(), &state.high_scores);
-                }).map_err(|e| format!("{}", e))?;
+                terminal
+                    .draw(|f| {
+                        render_high_scores(f, f.area(), &state.high_scores);
+                    })
+                    .map_err(|e| format!("{}", e))?;
             }
 
             AppState::Playing => {
                 if too_small {
                     state.state = AppState::Paused;
-                    terminal.draw(|f| {
-                        render_terminal_too_small(f, f.area());
-                    }).map_err(|e| format!("{}", e))?;
+                    terminal
+                        .draw(|f| {
+                            render_terminal_too_small(f, f.area());
+                        })
+                        .map_err(|e| format!("{}", e))?;
                     continue;
                 }
 
@@ -253,20 +259,23 @@ pub fn run_app() -> Result<(), String> {
                     && state.power_pellet_timer <= 14  // ~2000ms / 150ms ≈ 13.3 ticks
                     && (state.power_pellet_timer / 2).is_multiple_of(2);
 
-                terminal.draw(|f| {
-                    let ctx = RenderContext {
-                        maze: &state.maze,
-                        pacman: &state.pacman,
-                        ghosts: &state.ghosts,
-                        score: state.score.score,
-                        lives: state.score.lives,
-                        level: state.level,
-                        fruit_active: state.fruit_active,
-                        fruit_pos: state.fruit_pos,
-                        power_pellet_flash: flash,
-                    };
-                    render_game(f, f.area(), &ctx);
-                }).map_err(|e| format!("{}", e))?;
+                terminal
+                    .draw(|f| {
+                        let ctx = RenderContext {
+                            maze: &state.maze,
+                            pacman: &state.pacman,
+                            ghosts: &state.ghosts,
+                            score: state.score.score,
+                            lives: state.score.lives,
+                            level: state.level,
+                            fruit_active: state.fruit_active,
+                            fruit_pos: state.fruit_pos,
+                            power_pellet_flash: flash,
+                            tick_count: state.tick_count,
+                        };
+                        render_game(f, f.area(), &ctx);
+                    })
+                    .map_err(|e| format!("{}", e))?;
             }
 
             AppState::Paused => {
@@ -278,25 +287,30 @@ pub fn run_app() -> Result<(), String> {
                 }
 
                 if too_small {
-                    terminal.draw(|f| {
-                        render_terminal_too_small(f, f.area());
-                    }).map_err(|e| format!("{}", e))?;
+                    terminal
+                        .draw(|f| {
+                            render_terminal_too_small(f, f.area());
+                        })
+                        .map_err(|e| format!("{}", e))?;
                 } else {
-                    terminal.draw(|f| {
-                        let ctx = RenderContext {
-                            maze: &state.maze,
-                            pacman: &state.pacman,
-                            ghosts: &state.ghosts,
-                            score: state.score.score,
-                            lives: state.score.lives,
-                            level: state.level,
-                            fruit_active: state.fruit_active,
-                            fruit_pos: state.fruit_pos,
-                            power_pellet_flash: false,
-                        };
-                        render_game(f, f.area(), &ctx);
-                        render_pause_overlay(f, f.area());
-                    }).map_err(|e| format!("{}", e))?;
+                    terminal
+                        .draw(|f| {
+                            let ctx = RenderContext {
+                                maze: &state.maze,
+                                pacman: &state.pacman,
+                                ghosts: &state.ghosts,
+                                score: state.score.score,
+                                lives: state.score.lives,
+                                level: state.level,
+                                fruit_active: state.fruit_active,
+                                fruit_pos: state.fruit_pos,
+                                power_pellet_flash: false,
+                                tick_count: state.tick_count,
+                            };
+                            render_game(f, f.area(), &ctx);
+                            render_pause_overlay(f, f.area());
+                        })
+                        .map_err(|e| format!("{}", e))?;
                 }
             }
 
@@ -337,15 +351,17 @@ pub fn run_app() -> Result<(), String> {
                     }
                 }
 
-                terminal.draw(|f| {
-                    render_game_over(
-                        f,
-                        f.area(),
-                        state.score.score,
-                        is_top10,
-                        &state.name_input,
-                    );
-                }).map_err(|e| format!("{}", e))?;
+                terminal
+                    .draw(|f| {
+                        render_game_over(
+                            f,
+                            f.area(),
+                            state.score.score,
+                            is_top10,
+                            &state.name_input,
+                        );
+                    })
+                    .map_err(|e| format!("{}", e))?;
             }
 
             AppState::Victory => {
@@ -358,9 +374,11 @@ pub fn run_app() -> Result<(), String> {
                     }
                 }
 
-                terminal.draw(|f| {
-                    render_victory(f, f.area(), state.score.score);
-                }).map_err(|e| format!("{}", e))?;
+                terminal
+                    .draw(|f| {
+                        render_victory(f, f.area(), state.score.score);
+                    })
+                    .map_err(|e| format!("{}", e))?;
             }
         }
 
@@ -382,9 +400,10 @@ fn tick_game(state: &mut GameState) {
     if let MoveResult::PortalTeleport(pos) = move_result {
         if let Some(dest) = teleport_portal(&state.maze, pos) {
             // Check if destination is occupied by a ghost in Chase/Scatter mode
-            let ghost_on_dest = state.ghosts.iter().any(|g| {
-                g.pos == dest && matches!(g.mode, GhostMode::Chase | GhostMode::Scatter)
-            });
+            let ghost_on_dest = state
+                .ghosts
+                .iter()
+                .any(|g| g.pos == dest && matches!(g.mode, GhostMode::Chase | GhostMode::Scatter));
             if ghost_on_dest {
                 // Lose a life
                 if lose_life(&mut state.score.lives) {
@@ -512,7 +531,7 @@ fn check_fruit_spawn(state: &mut GameState) {
 
 fn spawn_fruit(state: &mut GameState) {
     let center = (15, 15); // Maze center
-    // If Pac-Man is at center, collect immediately
+                           // If Pac-Man is at center, collect immediately
     if state.pacman.pos == center {
         let val = fruit_value(state.level);
         add_points(&mut state.score, ScoreEvent::Fruit(val));
