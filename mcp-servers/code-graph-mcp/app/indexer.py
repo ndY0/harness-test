@@ -98,7 +98,7 @@ async def _index_file(
     sym_id_map, name_to_sym_id, uri_name_to_id = await _upsert_symbols(client, symbols)
 
     # Build and upsert edges
-    edges = await _extract_edges(lsp, plugin, symbols, name_to_sym_id, uri_name_to_id)
+    edges = await _extract_edges(lsp, plugin, symbols, name_to_sym_id, uri_name_to_id, warm_start=True)
     await _upsert_edges(client, edges)
 
     # Close the file that was opened by _extract_symbols
@@ -247,8 +247,15 @@ async def _extract_edges(
     symbols: list[dict],
     name_to_sym_id: dict[str, str],
     uri_name_to_id: dict | None = None,
+    *,
+    warm_start: bool = False,
 ) -> list[tuple[str, str, str]]:
-    """Extract call and type hierarchy edges for a list of symbols."""
+    """Extract call and type hierarchy edges for a list of symbols.
+    
+    warm_start=True skips the analysis-readiness probe and uses minimal
+    delays, suitable for incremental (single-file) re-indexes where the LSP
+    server is already running and analysis is fast.
+    """
     edges: list[tuple[str, str, str]] = []
 
     if uri_name_to_id is None:
@@ -278,26 +285,44 @@ async def _extract_edges(
             probe_line = probe["line"] - 1
             probe_col = probe["col"]
             ready = False
-            for delay in (0.1, 0.2, 0.5, 1):
-                await asyncio.sleep(delay)
+
+            if warm_start:
+                # Incremental: LSP is already hot. Try once with a tiny delay.
+                await asyncio.sleep(0.1)
                 items = await lsp.prepare_call_hierarchy(file_uri, probe_line, probe_col)
                 if items:
-                    for extra in (0.2, 0.5, 1, 2):
-                        await asyncio.sleep(extra)
-                        outgoing = await lsp.outgoing_calls(items[0])
-                        incoming = await lsp.incoming_calls(items[0])
-                        if outgoing or incoming:
-                            ready = True
-                            break
-                        log.debug("indexer.call_hierarchy_stale",
-                                  sym=probe["name"], extra=extra)
+                    outgoing = await lsp.outgoing_calls(items[0])
+                    incoming = await lsp.incoming_calls(items[0])
+                    if outgoing or incoming:
+                        ready = True
                     else:
                         log.debug("indexer.call_hierarchy_no_edges",
-                                  sym=probe["name"])
-                    ready = True
-                    break
-                log.debug("indexer.call_hierarchy_waiting",
-                          sym=probe["name"], delay=delay)
+                                  sym=probe["name"], warm_start=True)
+                else:
+                    log.debug("indexer.call_hierarchy_empty",
+                              sym=probe["name"], warm_start=True)
+            else:
+                # Full index: exponential backoff to let analysis stabilise.
+                for delay in (0.1, 0.2, 0.5, 1):
+                    await asyncio.sleep(delay)
+                    items = await lsp.prepare_call_hierarchy(file_uri, probe_line, probe_col)
+                    if items:
+                        for extra in (0.2, 0.5, 1, 2):
+                            await asyncio.sleep(extra)
+                            outgoing = await lsp.outgoing_calls(items[0])
+                            incoming = await lsp.incoming_calls(items[0])
+                            if outgoing or incoming:
+                                ready = True
+                                break
+                            log.debug("indexer.call_hierarchy_stale",
+                                      sym=probe["name"], extra=extra)
+                        else:
+                            log.debug("indexer.call_hierarchy_no_edges",
+                                      sym=probe["name"])
+                        ready = True
+                        break
+                    log.debug("indexer.call_hierarchy_waiting",
+                              sym=probe["name"], delay=delay)
             if ready:
                 log.debug("indexer.call_hierarchy_ready", sym=probe["name"])
             else:
