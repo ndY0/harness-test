@@ -37,7 +37,10 @@ pub fn load_scores() -> io::Result<Vec<ScoreEntry>> {
             }
         },
         Err(e) => {
-            eprintln!("Warning: cannot read scoreboard file ({}), starting fresh", e);
+            eprintln!(
+                "Warning: cannot read scoreboard file ({}), starting fresh",
+                e
+            );
             Ok(Vec::new())
         }
     }
@@ -110,8 +113,14 @@ mod tests {
     fn test_save_and_load_scores() {
         clean_scores();
         let entries = vec![
-            ScoreEntry { name: "AAA".to_string(), score: 1000 },
-            ScoreEntry { name: "BBB".to_string(), score: 500 },
+            ScoreEntry {
+                name: "AAA".to_string(),
+                score: 1000,
+            },
+            ScoreEntry {
+                name: "BBB".to_string(),
+                score: 500,
+            },
         ];
         save_scores(&entries).unwrap();
         let loaded = load_scores().unwrap();
@@ -128,14 +137,20 @@ mod tests {
 
     #[test]
     fn test_is_top_10_not_full() {
-        let entries = vec![ScoreEntry { name: "A".to_string(), score: 100 }];
+        let entries = vec![ScoreEntry {
+            name: "A".to_string(),
+            score: 100,
+        }];
         assert!(is_top_10(&entries, 50));
     }
 
     #[test]
     fn test_is_top_10_qualifies() {
         let entries: Vec<ScoreEntry> = (0..10)
-            .map(|i| ScoreEntry { name: format!("{:0>3}", i), score: (100 * (10 - i)) as u32 })
+            .map(|i| ScoreEntry {
+                name: format!("{:0>3}", i),
+                score: (100 * (10 - i)) as u32,
+            })
             .collect();
         // Lowest score is 100
         assert!(is_top_10(&entries, 200));
@@ -146,10 +161,13 @@ mod tests {
     fn test_insert_score_maintains_top_10() {
         let mut entries = Vec::new();
         for i in 0..12 {
-            insert_score(&mut entries, ScoreEntry {
-                name: format!("{:0>3}", i),
-                score: i * 100,
-            });
+            insert_score(
+                &mut entries,
+                ScoreEntry {
+                    name: format!("{:0>3}", i),
+                    score: i * 100,
+                },
+            );
         }
         assert_eq!(entries.len(), 10);
         // Highest scores should be 1100 down to 200
@@ -159,10 +177,17 @@ mod tests {
 
     #[test]
     fn test_tie_retains_older_entry() {
-        let mut entries = vec![
-            ScoreEntry { name: "AAA".to_string(), score: 1000 },
-        ];
-        insert_score(&mut entries, ScoreEntry { name: "BBB".to_string(), score: 1000 });
+        let mut entries = vec![ScoreEntry {
+            name: "AAA".to_string(),
+            score: 1000,
+        }];
+        insert_score(
+            &mut entries,
+            ScoreEntry {
+                name: "BBB".to_string(),
+                score: 1000,
+            },
+        );
         assert_eq!(entries.len(), 2);
         // Both have 1000, older entry (AAA) should be first
         assert_eq!(entries[0].name, "AAA");

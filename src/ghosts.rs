@@ -1,7 +1,5 @@
-use crate::maze::{Direction, MazeGrid, is_wall};
-use crate::entities::{
-    Ghost, GhostMode, GhostPersonality, PacMan,
-};
+use crate::entities::{Ghost, GhostMode, GhostPersonality, PacMan};
+use crate::maze::{is_wall, Direction, MazeGrid};
 use rand::Rng;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -14,30 +12,20 @@ pub enum GhostEvent {
 
 const SCATTER_TARGET: (usize, usize) = (1, 29);
 
-fn ghost_target(
-    ghost: &Ghost,
-    pacman: &PacMan,
-    blinky_pos: (usize, usize),
-) -> (usize, usize) {
+fn ghost_target(ghost: &Ghost, pacman: &PacMan, blinky_pos: (usize, usize)) -> (usize, usize) {
     match ghost.personality {
         GhostPersonality::Blinky => pacman.pos,
         GhostPersonality::Pinky => {
             let (dx, dy) = pacman.dir.delta();
             let tx = pacman.pos.0 as isize + dx * 4;
             let ty = pacman.pos.1 as isize + dy * 4;
-            (
-                tx.clamp(0, 30) as usize,
-                ty.clamp(0, 30) as usize,
-            )
+            (tx.clamp(0, 30) as usize, ty.clamp(0, 30) as usize)
         }
         GhostPersonality::Inky => {
             let (dx, dy) = pacman.dir.delta();
             let ahead_x = pacman.pos.0 as isize + dx * 2;
             let ahead_y = pacman.pos.1 as isize + dy * 2;
-            let ahead = (
-                ahead_x.clamp(0, 30) as usize,
-                ahead_y.clamp(0, 30) as usize,
-            );
+            let ahead = (ahead_x.clamp(0, 30) as usize, ahead_y.clamp(0, 30) as usize);
             // Double the vector from Blinky to 2-ahead
             let bx = blinky_pos.0 as isize;
             let by = blinky_pos.1 as isize;
@@ -45,10 +33,7 @@ fn ghost_target(
             let ay = ahead.1 as isize;
             let tx = ax + (ax - bx);
             let ty = ay + (ay - by);
-            (
-                tx.clamp(0, 30) as usize,
-                ty.clamp(0, 30) as usize,
-            )
+            (tx.clamp(0, 30) as usize, ty.clamp(0, 30) as usize)
         }
         GhostPersonality::Clyde => {
             let dx = (pacman.pos.0 as isize - ghost.pos.0 as isize).abs();
@@ -76,7 +61,12 @@ fn ghost_direction(
     maze: &MazeGrid,
     can_reverse: bool,
 ) -> Direction {
-    let dirs = [Direction::Up, Direction::Down, Direction::Left, Direction::Right];
+    let dirs = [
+        Direction::Up,
+        Direction::Down,
+        Direction::Left,
+        Direction::Right,
+    ];
     let reverse = current_dir.opposite();
 
     let mut best_dir = current_dir;
@@ -123,8 +113,14 @@ fn ghost_direction(
 }
 
 fn random_direction(pos: (usize, usize), maze: &MazeGrid, rng: &mut impl Rng) -> Direction {
-    let dirs = [Direction::Up, Direction::Down, Direction::Left, Direction::Right];
-    let valid: Vec<Direction> = dirs.iter()
+    let dirs = [
+        Direction::Up,
+        Direction::Down,
+        Direction::Left,
+        Direction::Right,
+    ];
+    let valid: Vec<Direction> = dirs
+        .iter()
         .filter(|&&dir| {
             let (dx, dy) = dir.delta();
             let nx = pos.0 as isize + dx;
@@ -244,8 +240,8 @@ pub fn is_ghost_in_lair(ghost: &Ghost, lair_pos: (usize, usize)) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::maze::Tile;
     use crate::entities::{Ghost, GhostMode, GhostPersonality, PacMan};
+    use crate::maze::Tile;
 
     #[allow(clippy::needless_range_loop)]
     fn test_maze() -> MazeGrid {
@@ -306,9 +302,7 @@ mod tests {
 
     #[test]
     fn test_enter_frightened_mode_reverses_direction() {
-        let mut ghosts = vec![
-            Ghost::new((10, 10), GhostPersonality::Blinky),
-        ];
+        let mut ghosts = vec![Ghost::new((10, 10), GhostPersonality::Blinky)];
         ghosts[0].dir = Direction::Right;
         enter_frightened_mode(&mut ghosts, 100);
         assert_eq!(ghosts[0].dir, Direction::Left);
@@ -318,16 +312,14 @@ mod tests {
     #[test]
     fn test_ghost_movement_toward_target() {
         let maze = test_maze();
-        let mut ghosts = vec![
-            Ghost {
-                pos: (10, 10),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Chase,
-                spawn: (10, 10),
-                tick_counter: 0,
-            },
-        ];
+        let mut ghosts = vec![Ghost {
+            pos: (10, 10),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Chase,
+            spawn: (10, 10),
+            tick_counter: 0,
+        }];
         let pacman = PacMan::new((20, 20));
         let events = move_ghosts(&mut ghosts, &maze, &pacman, (10, 10), (15, 15));
 
@@ -353,16 +345,14 @@ mod tests {
         tiles[10][11] = Tile::Wall;
         let maze = MazeGrid::new(tiles);
 
-        let mut ghosts = vec![
-            Ghost {
-                pos: (10, 10),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Chase,
-                spawn: (10, 10),
-                tick_counter: 0,
-            },
-        ];
+        let mut ghosts = vec![Ghost {
+            pos: (10, 10),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Chase,
+            spawn: (10, 10),
+            tick_counter: 0,
+        }];
         let pacman = PacMan::new((20, 20));
         let _events = move_ghosts(&mut ghosts, &maze, &pacman, (10, 10), (15, 15));
         // Ghost trapped in 1x1 cell
@@ -372,16 +362,14 @@ mod tests {
     #[test]
     fn test_frightened_ghost_half_speed() {
         let maze = test_maze();
-        let mut ghosts = vec![
-            Ghost {
-                pos: (10, 10),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Frightened(100),
-                spawn: (10, 10),
-                tick_counter: 0,
-            },
-        ];
+        let mut ghosts = vec![Ghost {
+            pos: (10, 10),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Frightened(100),
+            spawn: (10, 10),
+            tick_counter: 0,
+        }];
         let pacman = PacMan::new((20, 20));
 
         // First tick (counter 0): should move (0 % 2 == 0)
@@ -397,38 +385,34 @@ mod tests {
     #[test]
     fn test_eaten_ghost_moves_to_lair() {
         let maze = test_maze();
-        let mut ghosts = vec![
-            Ghost {
-                pos: (20, 20),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Eaten,
-                spawn: (15, 15),
-                tick_counter: 0,
-            },
-        ];
+        let mut ghosts = vec![Ghost {
+            pos: (20, 20),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Eaten,
+            spawn: (15, 15),
+            tick_counter: 0,
+        }];
         let pacman = PacMan::new((5, 5));
         let lair = (15, 15);
         move_ghosts(&mut ghosts, &maze, &pacman, (20, 20), lair);
         // Should move toward lair
-        let dist_after = (ghosts[0].pos.0 as i64 - lair.0 as i64).abs() +
-                          (ghosts[0].pos.1 as i64 - lair.1 as i64).abs();
+        let dist_after = (ghosts[0].pos.0 as i64 - lair.0 as i64).abs()
+            + (ghosts[0].pos.1 as i64 - lair.1 as i64).abs();
         let dist_before = (20i64 - lair.0 as i64).abs() + (20i64 - lair.1 as i64).abs();
         assert!(dist_after < dist_before);
     }
 
     #[test]
     fn test_exit_frightened_mode() {
-        let mut ghosts = vec![
-            Ghost {
-                pos: (10, 10),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Frightened(50),
-                spawn: (10, 10),
-                tick_counter: 0,
-            },
-        ];
+        let mut ghosts = vec![Ghost {
+            pos: (10, 10),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Frightened(50),
+            spawn: (10, 10),
+            tick_counter: 0,
+        }];
         exit_frightened_mode(&mut ghosts);
         assert_eq!(ghosts[0].mode, GhostMode::Chase);
     }

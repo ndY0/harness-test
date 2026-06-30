@@ -1,12 +1,12 @@
-mod maze;
-mod levels;
+mod app;
 mod entities;
 mod ghosts;
-mod scoring;
-mod scoreboard;
 mod input;
+mod levels;
+mod maze;
 mod render;
-mod app;
+mod scoreboard;
+mod scoring;
 
 fn main() {
     match app::run_app() {

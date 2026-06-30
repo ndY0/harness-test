@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "orchestrator",
+  "instructions": ["AGENTS.md", "agents/PIPELINE.md"],
+  "mcp": {
+    "doc-retrieval": {
+      "type": "remote",
+      "url": "http://localhost:8000/mcp",
+      "enabled": true
+    },
+    "jira-bridge": {
+      "type": "remote",
+      "url": "http://localhost:8001/mcp",
+      "enabled": true
+    },
+    "code-graph": {
+      "type": "remote",
+      "url": "http://localhost:8765/mcp",
+      "enabled": true
+    }
+  }
+}

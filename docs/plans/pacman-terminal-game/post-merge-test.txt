@@ -1,0 +1,288 @@
+warning: unused import: `PacManState`
+ --> src/ghosts.rs:3:49
+  |
+3 |     Ghost, GhostMode, GhostPersonality, PacMan, PacManState,
+  |                                                 ^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary parentheses around assigned value
+   --> src/ghosts.rs:410:26
+    |
+410 |         let dist_after = ((ghosts[0].pos.0 as i64 - lair.0 as i64).abs() +
+    |                          ^
+411 |                           (ghosts[0].pos.1 as i64 - lair.1 as i64).abs());
+    |                                                                         ^
+    |
+    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default
+help: remove these parentheses
+    |
+410 ~         let dist_after = (ghosts[0].pos.0 as i64 - lair.0 as i64).abs() +
+411 ~                           (ghosts[0].pos.1 as i64 - lair.1 as i64).abs() ;
+    |
+
+warning: unnecessary parentheses around assigned value
+   --> src/ghosts.rs:412:27
+    |
+412 |         let dist_before = ((20i64 - lair.0 as i64).abs() + (20i64 - lair.1 as i64).abs());
+    |                           ^                                                             ^
+    |
+help: remove these parentheses
+    |
+412 -         let dist_before = ((20i64 - lair.0 as i64).abs() + (20i64 - lair.1 as i64).abs());
+412 +         let dist_before = (20i64 - lair.0 as i64).abs() + (20i64 - lair.1 as i64).abs() ;
+    |
+
+warning: unused imports: `Tile`, `consume_fruit`, and `is_wall`
+ --> src/app.rs:2:15
+  |
+2 |     MazeGrid, Tile, Direction, consume_dot, consume_fruit, dots_remaining,
+  |               ^^^^                          ^^^^^^^^^^^^^
+3 |     is_wall, teleport_portal,
+  |     ^^^^^^^
+
+warning: unused import: `LevelConfig`
+ --> src/app.rs:5:21
+  |
+5 | use crate::levels::{LevelConfig, get_level_config};
+  |                     ^^^^^^^^^^^
+
+warning: unused import: `Stdout`
+  --> src/app.rs:21:29
+   |
+21 | use std::io::{self, stdout, Stdout};
+   |                             ^^^^^^
+
+warning: variable does not need to be mutable
+   --> src/ghosts.rs:126:9
+    |
+126 |     let mut valid: Vec<Direction> = dirs.iter()
+    |         ----^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `events`
+   --> src/ghosts.rs:363:13
+    |
+363 |         let events = move_ghosts(&mut ghosts, &maze, &pacman, (10, 10), (15, 15));
+    |             ^^^^^^ help: if this is intentional, prefix it with an underscore: `_events`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `points`
+   --> src/app.rs:403:38
+    |
+403 |         crate::maze::TileEffect::Dot(points) => {
+    |                                      ^^^^^^ help: if this is intentional, prefix it with an underscore: `_points`
+
+warning: unused variable: `points`
+   --> src/app.rs:407:46
+    |
+407 |         crate::maze::TileEffect::PowerPellet(points) => {
+    |                                              ^^^^^^ help: if this is intentional, prefix it with an underscore: `_points`
+
+warning: unused variable: `remaining`
+   --> src/app.rs:570:13
+    |
+570 |         let remaining = dots_remaining(&state.maze);
+    |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_remaining`
+
+warning: variant `Fruit` is never constructed
+  --> src/maze.rs:46:5
+   |
+42 | pub enum TileEffect {
+   |          ---------- variant in this enum
+...
+46 |     Fruit(u32),
+   |     ^^^^^
+   |
+   = note: `TileEffect` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: variants `Dying` and `Respawning` are never constructed
+ --> src/entities.rs:6:5
+  |
+4 | pub enum PacManState {
+  |          ----------- variants in this enum
+5 |     Alive,
+6 |     Dying(u8),
+  |     ^^^^^
+7 |     Respawning,
+  |     ^^^^^^^^^^
+  |
+  = note: `PacManState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: variant `Scatter` is never constructed
+  --> src/entities.rs:47:5
+   |
+45 | pub enum GhostMode {
+   |          --------- variant in this enum
+46 |     Chase,
+47 |     Scatter,
+   |     ^^^^^^^
+   |
+   = note: `GhostMode` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `spawn` is never read
+  --> src/entities.rs:58:9
+   |
+53 | pub struct Ghost {
+   |            ----- field in this struct
+...
+58 |     pub spawn: (usize, usize),
+   |         ^^^^^
+   |
+   = note: `Ghost` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: method `reset` is never used
+  --> src/entities.rs:74:12
+   |
+62 | impl Ghost {
+   | ---------- method in this implementation
+...
+74 |     pub fn reset(&mut self) {
+   |            ^^^^^
+
+warning: variant `None` is never constructed
+  --> src/entities.rs:86:5
+   |
+83 | pub enum CollisionEvent {
+   |          -------------- variant in this enum
+...
+86 |     None,
+   |     ^^^^
+   |
+   = note: `CollisionEvent` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: variant `Dying` is never constructed
+  --> src/entities.rs:94:5
+   |
+90 | pub enum MoveResult {
+   |          ---------- variant in this enum
+...
+94 |     Dying,
+   |     ^^^^^
+   |
+   = note: `MoveResult` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: function `wrap_direction` is never used
+   --> src/entities.rs:165:8
+    |
+165 | pub fn wrap_direction(d: Direction) -> Direction {
+    |        ^^^^^^^^^^^^^^
+
+warning: variant `None` is never constructed
+  --> src/ghosts.rs:11:5
+   |
+ 8 | pub enum GhostEvent {
+   |          ---------- variant in this enum
+...
+11 |     None,
+   |     ^^^^
+   |
+   = note: `GhostEvent` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: function `is_ghost_in_lair` is never used
+   --> src/ghosts.rs:238:8
+    |
+238 | pub fn is_ghost_in_lair(ghost: &Ghost, lair_pos: (usize, usize)) -> bool {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: variants `Up` and `Down` are never constructed
+ --> src/input.rs:8:5
+  |
+5 | pub enum Action {
+  |          ------ variants in this enum
+...
+8 |     Up,
+  |     ^^
+9 |     Down,
+  |     ^^^^
+  |
+  = note: `Action` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `show_high_scores` is never read
+  --> src/app.rs:49:9
+   |
+34 | pub struct GameState {
+   |            --------- field in this struct
+...
+49 |     pub show_high_scores: bool,
+   |         ^^^^^^^^^^^^^^^^
+
+warning: `harness-test` (bin "pacman-terminal" test) generated 23 warnings (run `cargo fix --bin "pacman-terminal" -p harness-test --tests` to apply 11 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.08s
+     Running unittests src/main.rs (target/debug/deps/pacman_terminal-62fcfba9376b50d3)
+
+running 66 tests
+test app::tests::test_app_state_enum ... ok
+test entities::tests::test_buffered_direction_change ... ok
+test entities::tests::test_collision_ghost_contact ... ok
+test entities::tests::test_collision_eaten_ghost_ignored ... ok
+test entities::tests::test_collision_ghost_eaten ... ok
+test entities::tests::test_buffered_direction_blocked ... ok
+test entities::tests::test_no_collision ... ok
+test entities::tests::test_pacman_move_into_wall ... ok
+test entities::tests::test_pacman_move_right ... ok
+test app::tests::test_fruit_spawn_triggers ... ok
+test app::tests::test_game_state_new ... ok
+test app::tests::test_reset_level ... ok
+test entities::tests::test_pacman_new ... ok
+test ghosts::tests::test_blinky_targets_pacman ... ok
+test ghosts::tests::test_clyde_chase_far ... ok
+test ghosts::tests::test_clyde_scatter_close ... ok
+test ghosts::tests::test_eaten_ghost_moves_to_lair ... ok
+test ghosts::tests::test_exit_frightened_mode ... ok
+test ghosts::tests::test_enter_frightened_mode_reverses_direction ... ok
+test ghosts::tests::test_frightened_ghost_half_speed ... ok
+test ghosts::tests::test_ghost_blocked_by_wall ... ok
+test ghosts::tests::test_ghost_movement_toward_target ... ok
+test ghosts::tests::test_inky_targets_double_vector ... ok
+test ghosts::tests::test_pinky_targets_ahead ... ok
+test levels::tests::test_all_levels_exist ... ok
+test levels::tests::test_fright_duration_decreasing ... ok
+test levels::tests::test_ghost_speed_increasing ... ok
+test levels::tests::test_portal_pairs_on_path_tiles ... ok
+test levels::tests::test_spawn_positions_on_path ... ok
+test levels::tests::test_power_pellets_per_level ... ok
+test input::tests::test_action_enum_variants ... ok
+test levels::tests::test_level_0_panics - should panic ... ok
+test maze::tests::test_consume_fruit ... ok
+test maze::tests::test_direction_delta ... ok
+test maze::tests::test_direction_opposite ... ok
+test maze::tests::test_dots_remaining ... ok
+test levels::tests::test_level_11_panics - should panic ... ok
+test maze::tests::test_consume_dot ... ok
+test maze::tests::test_is_portal ... ok
+test maze::tests::test_is_wall ... ok
+test render::tests::test_centered_rect_smaller_than_parent ... ok
+test render::tests::test_ghost_glyph_blinky ... ok
+test render::tests::test_ghost_glyph_eaten ... ok
+test scoreboard::tests::test_insert_score_maintains_top_10 ... ok
+test render::tests::test_ghost_glyph_frightened ... ok
+test maze::tests::test_teleport_portal ... ok
+test scoreboard::tests::test_is_top_10_empty ... ok
+test render::tests::test_centered_rect ... ok
+test scoreboard::tests::test_is_top_10_qualifies ... ok
+test render::tests::test_ghost_glyph_frightened_flash ... ok
+test scoreboard::tests::test_load_empty_when_no_file ... ok
+test scoreboard::tests::test_is_top_10_not_full ... ok
+test scoreboard::tests::test_tie_retains_older_entry ... ok
+test scoring::tests::test_fruit_value_per_level ... ok
+test scoring::tests::test_dot_scoring ... ok
+test scoring::tests::test_ghost_eat_chain ... ok
+test scoring::tests::test_level_bonus_values ... ok
+test scoreboard::tests::test_save_and_load_scores ... ok
+test scoring::tests::test_ghost_eat_chain_reset ... ok
+test scoring::tests::test_lose_life ... ok
+test scoring::tests::test_fruit_scoring ... ok
+test scoring::tests::test_level_complete_bonus ... ok
+test scoring::tests::test_score_new ... ok
+test scoring::tests::test_lose_life_at_zero ... ok
+test scoring::tests::test_power_pellet_scoring ... ok
+test input::tests::test_check_resize_returns_some ... ok
+
+test result: ok. 66 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

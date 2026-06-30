@@ -23,10 +23,18 @@ const P: Tile = Tile::PowerPellet;
 const E: Tile = Tile::Empty;
 
 fn setup_lair(tiles: &mut [[Tile; 31]; 31]) {
-    for x in 13..18 { tiles[14][x] = W; }
-    for x in 13..18 { tiles[16][x] = W; }
-    for y in 14..17 { tiles[y][13] = W; }
-    for y in 14..17 { tiles[y][17] = W; }
+    for x in 13..18 {
+        tiles[14][x] = W;
+    }
+    for x in 13..18 {
+        tiles[16][x] = W;
+    }
+    for y in 14..17 {
+        tiles[y][13] = W;
+    }
+    for y in 14..17 {
+        tiles[y][17] = W;
+    }
     for y in 14..17 {
         for x in 14..17 {
             tiles[y][x] = E;
@@ -42,10 +50,18 @@ fn make_level_1() -> LevelConfig {
         }
     }
     // Inner walls
-    for x in 5..26 { tiles[5][x] = W; }
-    for x in 5..26 { tiles[25][x] = W; }
-    for y in 5..26 { tiles[y][5] = W; }
-    for y in 5..26 { tiles[y][25] = W; }
+    for x in 5..26 {
+        tiles[5][x] = W;
+    }
+    for x in 5..26 {
+        tiles[25][x] = W;
+    }
+    for y in 5..26 {
+        tiles[y][5] = W;
+    }
+    for y in 5..26 {
+        tiles[y][25] = W;
+    }
     // Gaps in inner walls
     tiles[5][15] = D;
     tiles[25][15] = D;
@@ -86,13 +102,21 @@ fn make_level_2() -> LevelConfig {
         }
     }
     // Horizontal walls
-    for x in 3..28 { tiles[8][x] = W; }
-    for x in 3..28 { tiles[22][x] = W; }
+    for x in 3..28 {
+        tiles[8][x] = W;
+    }
+    for x in 3..28 {
+        tiles[22][x] = W;
+    }
     tiles[8][15] = D;
     tiles[22][15] = D;
     // Vertical walls
-    for y in 8..23 { tiles[y][8] = W; }
-    for y in 8..23 { tiles[y][22] = W; }
+    for y in 8..23 {
+        tiles[y][8] = W;
+    }
+    for y in 8..23 {
+        tiles[y][22] = W;
+    }
     tiles[15][8] = D;
     tiles[15][22] = D;
     // Power pellets
@@ -130,14 +154,22 @@ fn make_level_3() -> LevelConfig {
         }
     }
     // T-shaped walls
-    for x in 10..21 { tiles[10][x] = W; }
-    for y in 10..21 { tiles[y][15] = W; }
+    for x in 10..21 {
+        tiles[10][x] = W;
+    }
+    for y in 10..21 {
+        tiles[y][15] = W;
+    }
     tiles[10][15] = D;
     tiles[20][15] = D;
     tiles[15][10] = D;
     // Additional walls
-    for x in 4..12 { tiles[4][x] = W; }
-    for x in 19..27 { tiles[26][x] = W; }
+    for x in 4..12 {
+        tiles[4][x] = W;
+    }
+    for x in 19..27 {
+        tiles[26][x] = W;
+    }
     tiles[4][8] = D;
     tiles[26][23] = D;
     // Power pellets
@@ -223,11 +255,15 @@ fn make_level_5() -> LevelConfig {
     }
     // Grid pattern wall segments
     for y in (3..28).step_by(6) {
-        for x in 3..28 { tiles[y][x] = W; }
+        for x in 3..28 {
+            tiles[y][x] = W;
+        }
         tiles[y][15] = D;
     }
     for x in (3..28).step_by(6) {
-        for y in 3..28 { tiles[y][x] = W; }
+        for y in 3..28 {
+            tiles[y][x] = W;
+        }
         tiles[15][x] = D;
     }
     // Power pellets
@@ -268,10 +304,18 @@ fn make_level_6() -> LevelConfig {
     for i in 0..4 {
         let s = 2 + i * 4;
         let e = 28 - i * 4;
-        for x in s..=e { tiles[s][x] = W; }
-        for y in s..=e { tiles[y][e] = W; }
-        for x in (s..=e).rev() { tiles[e][x] = W; }
-        for y in (s..=e).rev() { tiles[y][s] = W; }
+        for x in s..=e {
+            tiles[s][x] = W;
+        }
+        for y in s..=e {
+            tiles[y][e] = W;
+        }
+        for x in (s..=e).rev() {
+            tiles[e][x] = W;
+        }
+        for y in (s..=e).rev() {
+            tiles[y][s] = W;
+        }
         // Gaps
         tiles[s][s + 4] = D;
         tiles[s + 4][e] = D;
@@ -361,14 +405,30 @@ fn make_level_8() -> LevelConfig {
         }
     }
     // Maze-like walls
-    for x in 2..29 { tiles[2][x] = W; }
-    for x in 2..29 { tiles[28][x] = W; }
-    for y in 2..29 { tiles[y][2] = W; }
-    for y in 2..29 { tiles[y][28] = W; }
-    for x in 4..27 { tiles[10][x] = W; }
-    for x in 4..27 { tiles[20][x] = W; }
-    for y in 4..27 { tiles[y][10] = W; }
-    for y in 4..27 { tiles[y][20] = W; }
+    for x in 2..29 {
+        tiles[2][x] = W;
+    }
+    for x in 2..29 {
+        tiles[28][x] = W;
+    }
+    for y in 2..29 {
+        tiles[y][2] = W;
+    }
+    for y in 2..29 {
+        tiles[y][28] = W;
+    }
+    for x in 4..27 {
+        tiles[10][x] = W;
+    }
+    for x in 4..27 {
+        tiles[20][x] = W;
+    }
+    for y in 4..27 {
+        tiles[y][10] = W;
+    }
+    for y in 4..27 {
+        tiles[y][20] = W;
+    }
     // Gaps
     tiles[2][15] = D;
     tiles[28][15] = D;
@@ -417,15 +477,23 @@ fn make_level_9() -> LevelConfig {
     // Complex wall pattern
     for i in 0..5 {
         let off = 2 + i * 5;
-        for x in off..(29 - off) { tiles[off][x] = W; }
-        for x in off..(29 - off) { tiles[29 - off][x] = W; }
+        for x in off..(29 - off) {
+            tiles[off][x] = W;
+        }
+        for x in off..(29 - off) {
+            tiles[29 - off][x] = W;
+        }
         tiles[off][15] = D;
         tiles[29 - off][15] = D;
     }
     for i in 0..5 {
         let off = 2 + i * 5;
-        for y in off..(29 - off) { tiles[y][off] = W; }
-        for y in off..(29 - off) { tiles[y][29 - off] = W; }
+        for y in off..(29 - off) {
+            tiles[y][off] = W;
+        }
+        for y in off..(29 - off) {
+            tiles[y][29 - off] = W;
+        }
         tiles[15][off] = D;
         tiles[15][29 - off] = D;
     }
@@ -466,9 +534,7 @@ fn make_level_10() -> LevelConfig {
     // Tight maze - many wall segments
     for y in 1..30 {
         for x in 1..30 {
-            if ((x % 3 == 0 && y % 3 == 0) || (x % 4 == 1 && y % 4 == 1))
-                && (x, y) != (15, 15)
-            {
+            if ((x % 3 == 0 && y % 3 == 0) || (x % 4 == 1 && y % 4 == 1)) && (x, y) != (15, 15) {
                 tiles[y][x] = W;
             }
         }
@@ -511,18 +577,20 @@ fn make_level_10() -> LevelConfig {
 
 use std::sync::LazyLock;
 
-static LEVELS: LazyLock<[LevelConfig; 10]> = LazyLock::new(|| [
-    make_level_1(),
-    make_level_2(),
-    make_level_3(),
-    make_level_4(),
-    make_level_5(),
-    make_level_6(),
-    make_level_7(),
-    make_level_8(),
-    make_level_9(),
-    make_level_10(),
-]);
+static LEVELS: LazyLock<[LevelConfig; 10]> = LazyLock::new(|| {
+    [
+        make_level_1(),
+        make_level_2(),
+        make_level_3(),
+        make_level_4(),
+        make_level_5(),
+        make_level_6(),
+        make_level_7(),
+        make_level_8(),
+        make_level_9(),
+        make_level_10(),
+    ]
+});
 
 pub fn get_level_config(level: u8) -> &'static LevelConfig {
     assert!((1..=10).contains(&level), "level out of bounds");
@@ -560,15 +628,35 @@ mod tests {
         for l in 1..=10 {
             let cfg = get_level_config(l);
             let ((a_x, a_y), (b_x, b_y)) = cfg.portal_pair_a;
-            assert!(!matches!(cfg.tiles[a_y][a_x], Tile::Wall),
-                "level {} portal_a_a is wall at ({},{})", l, a_x, a_y);
-            assert!(!matches!(cfg.tiles[b_y][b_x], Tile::Wall),
-                "level {} portal_a_b is wall at ({},{})", l, b_x, b_y);
+            assert!(
+                !matches!(cfg.tiles[a_y][a_x], Tile::Wall),
+                "level {} portal_a_a is wall at ({},{})",
+                l,
+                a_x,
+                a_y
+            );
+            assert!(
+                !matches!(cfg.tiles[b_y][b_x], Tile::Wall),
+                "level {} portal_a_b is wall at ({},{})",
+                l,
+                b_x,
+                b_y
+            );
             let ((c_x, c_y), (d_x, d_y)) = cfg.portal_pair_b;
-            assert!(!matches!(cfg.tiles[c_y][c_x], Tile::Wall),
-                "level {} portal_b_a is wall at ({},{})", l, c_x, c_y);
-            assert!(!matches!(cfg.tiles[d_y][d_x], Tile::Wall),
-                "level {} portal_b_b is wall at ({},{})", l, d_x, d_y);
+            assert!(
+                !matches!(cfg.tiles[c_y][c_x], Tile::Wall),
+                "level {} portal_b_a is wall at ({},{})",
+                l,
+                c_x,
+                c_y
+            );
+            assert!(
+                !matches!(cfg.tiles[d_y][d_x], Tile::Wall),
+                "level {} portal_b_b is wall at ({},{})",
+                l,
+                d_x,
+                d_y
+            );
         }
     }
 
@@ -576,10 +664,18 @@ mod tests {
     fn test_power_pellets_per_level() {
         for l in 1..=10 {
             let cfg = get_level_config(l);
-            let pellet_count = cfg.tiles.iter().flatten()
+            let pellet_count = cfg
+                .tiles
+                .iter()
+                .flatten()
                 .filter(|t| matches!(t, Tile::PowerPellet))
                 .count();
-            assert!(pellet_count >= 4, "level {} has only {} power pellets", l, pellet_count);
+            assert!(
+                pellet_count >= 4,
+                "level {} has only {} power pellets",
+                l,
+                pellet_count
+            );
         }
     }
 
@@ -588,11 +684,21 @@ mod tests {
         for l in 1..=10 {
             let cfg = get_level_config(l);
             let (px, py) = cfg.pacman_spawn;
-            assert!(!matches!(cfg.tiles[py][px], Tile::Wall),
-                "level {} pacman spawn on wall at ({},{})", l, px, py);
+            assert!(
+                !matches!(cfg.tiles[py][px], Tile::Wall),
+                "level {} pacman spawn on wall at ({},{})",
+                l,
+                px,
+                py
+            );
             for (gx, gy) in &cfg.ghost_spawns {
-                assert!(!matches!(cfg.tiles[*gy][*gx], Tile::Wall),
-                    "level {} ghost spawn on wall at ({},{})", l, gx, gy);
+                assert!(
+                    !matches!(cfg.tiles[*gy][*gx], Tile::Wall),
+                    "level {} ghost spawn on wall at ({},{})",
+                    l,
+                    gx,
+                    gy
+                );
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::maze::{Direction, MazeGrid, Tile, is_wall};
+use crate::maze::{is_wall, Direction, MazeGrid, Tile};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PacManState {
@@ -112,9 +112,7 @@ pub fn move_pacman(pacman: &mut PacMan, maze: &MazeGrid) -> MoveResult {
         let (dx, dy) = pacman.next_dir.delta();
         let nx = pacman.pos.0 as isize + dx;
         let ny = pacman.pos.1 as isize + dy;
-        if nx >= 0 && ny >= 0 && nx < 31 && ny < 31
-            && !is_wall(maze, (nx as usize, ny as usize))
-        {
+        if nx >= 0 && ny >= 0 && nx < 31 && ny < 31 && !is_wall(maze, (nx as usize, ny as usize)) {
             dir = pacman.next_dir;
             pacman.dir = dir;
             pacman.next_dir = Direction::None;
@@ -194,7 +192,9 @@ mod tests {
             }
         }
         // Inner wall
-        for x in 5..10 { tiles[10][x] = Tile::Wall; }
+        for x in 5..10 {
+            tiles[10][x] = Tile::Wall;
+        }
         MazeGrid::new(tiles)
     }
 
@@ -245,7 +245,7 @@ mod tests {
         let mut pacman = PacMan::new((15, 23));
         pacman.dir = Direction::Right;
         pacman.next_dir = Direction::Left; // back into previous cell
-        // Buffered direction Left is valid (no wall), so pacman turns around
+                                           // Buffered direction Left is valid (no wall), so pacman turns around
         let result = move_pacman(&mut pacman, &maze);
         assert_eq!(result, MoveResult::Moved((14, 23)));
     }
@@ -253,16 +253,14 @@ mod tests {
     #[test]
     fn test_collision_ghost_contact() {
         let pacman = PacMan::new((10, 10));
-        let ghosts = vec![
-            Ghost {
-                pos: (10, 10),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Chase,
-                spawn: (5, 5),
-                tick_counter: 0,
-            },
-        ];
+        let ghosts = vec![Ghost {
+            pos: (10, 10),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Chase,
+            spawn: (5, 5),
+            tick_counter: 0,
+        }];
         let events = check_collisions(&pacman, &ghosts);
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], CollisionEvent::GhostContact);
@@ -271,16 +269,14 @@ mod tests {
     #[test]
     fn test_collision_ghost_eaten() {
         let pacman = PacMan::new((10, 10));
-        let ghosts = vec![
-            Ghost {
-                pos: (10, 10),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Frightened(50),
-                spawn: (5, 5),
-                tick_counter: 0,
-            },
-        ];
+        let ghosts = vec![Ghost {
+            pos: (10, 10),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Frightened(50),
+            spawn: (5, 5),
+            tick_counter: 0,
+        }];
         let events = check_collisions(&pacman, &ghosts);
         assert_eq!(events.len(), 1);
         assert_eq!(events[0], CollisionEvent::GhostEaten);
@@ -289,16 +285,14 @@ mod tests {
     #[test]
     fn test_no_collision() {
         let pacman = PacMan::new((10, 10));
-        let ghosts = vec![
-            Ghost {
-                pos: (12, 12),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Chase,
-                spawn: (5, 5),
-                tick_counter: 0,
-            },
-        ];
+        let ghosts = vec![Ghost {
+            pos: (12, 12),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Chase,
+            spawn: (5, 5),
+            tick_counter: 0,
+        }];
         let events = check_collisions(&pacman, &ghosts);
         assert!(events.is_empty());
     }
@@ -306,16 +300,14 @@ mod tests {
     #[test]
     fn test_collision_eaten_ghost_ignored() {
         let pacman = PacMan::new((10, 10));
-        let ghosts = vec![
-            Ghost {
-                pos: (10, 10),
-                dir: Direction::Up,
-                personality: GhostPersonality::Blinky,
-                mode: GhostMode::Eaten,
-                spawn: (5, 5),
-                tick_counter: 0,
-            },
-        ];
+        let ghosts = vec![Ghost {
+            pos: (10, 10),
+            dir: Direction::Up,
+            personality: GhostPersonality::Blinky,
+            mode: GhostMode::Eaten,
+            spawn: (5, 5),
+            tick_counter: 0,
+        }];
         let events = check_collisions(&pacman, &ghosts);
         assert!(events.is_empty());
     }

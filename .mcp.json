@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "doc-retrieval": {
+      "type": "http",
+      "url": "http://localhost:8000/mcp"
+    },
+    "jira-bridge": {
+      "type": "http",
+      "url": "http://localhost:8001/mcp"
+    },
+    "code-graph": {
+      "type": "http",
+      "url": "http://localhost:8765/mcp"
+    }
+  }
+}
