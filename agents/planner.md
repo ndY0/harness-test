@@ -28,6 +28,7 @@ Max depth: **2**. At depth 2, treat all complex sub-tasks as `simple` and dispat
 - Agent tool: spawn Implementers and Reviewers — use this, never `claude --print`
 - No: web search, direct `src/` or `docs/specs/` writes
 - Code Graph (MCP): Yes, Primary tool for decomposition, coupling analysis, and boundary detection.
+- Channel Coms (MCP): Monitor sub-task channels, collect pending messages, arbitrate timeouts.
 
 ## Workflow phases
 
@@ -67,6 +68,11 @@ Validate disjointness using the Code Graph:
 
 Max **6 sub-tasks** per Planner. If more required, escalate with a decomposition proposal.
 
+**Channel assignment**: For sub-tasks that share interface contracts (e.g. one defines
+a trait, another consumes it), assign them a shared channel name:
+`planner:<feature-id>:<purpose>`. Record this in the manifest `channel` field.
+Sub-tasks with no shared contracts get no channel.
+
 Write a manifest for each sub-task at `docs/plans/<feature-id>/<subtask-id>.md` with front-matter:
 
     ---
@@ -75,6 +81,7 @@ Write a manifest for each sub-task at `docs/plans/<feature-id>/<subtask-id>.md` 
     title: "short description"
     write_set: [list of files]
     depends_on: []          # or [F-042-S0] if sequenced
+    channel: planner:F042:contracts   # or "none"
     complexity: simple      # simple | complex
     planner_depth: 0        # pass PLANNER_DEPTH+1 to child Planner
     ---
@@ -100,47 +107,34 @@ For each sub-task, in repo root:
 **Independent sub-tasks**: launch all in parallel using the Agent tool (`run_in_background: true`). For each sub-task spawn one Agent with:
 - `description`: "Implementer for <subtask-id>"
 - `prompt`: the full implementer instructions including manifest path, write set, and `PLANNER_DEPTH=<depth+1>`
+- Include the channel name (from the manifest `channel` field) and this instruction: "Poll this channel between work stages for messages from sibling sub-tasks. If a sibling requests a change to a shared interface, respond on the channel and apply the agreed change."
 - The agent must read `agents/implementer.md` as its system prompt and operate in the worktree at `.worktrees/<subtask-id>`
 
 **Sequenced sub-tasks**: wait for the dependency agent to complete and pass review, then spawn its dependent with the completed interface contracts included in the prompt.
 
 **Complex sub-tasks** (if `PLANNER_DEPTH < 2`): spawn a child Planner Agent instead of an Implementer Agent, passing `PLANNER_DEPTH=<depth+1>`.
 
-### Phase 5 – Supervise (Wait discipline)
+### Phase 5 – Supervise with channels
 
-**CRITICAL RULE: Do not poll. Do not inspect. Do not read.**
+Wait for ALL sub-task agents to complete. While waiting, periodically monitor
+each active channel using Channel Coms MCP:
 
-You are not a supervisor who checks on workers. You are a **result collector**.
+1. Call `unread_count(channel)` on each sub-task channel.
+2. If any channel has `unread_count > 0` and `conversation_age(channel)` exceeds
+   **300 seconds** (5 minutes), the conversation has timed out.
+3. **Timeout arbitration**:
+   - Call `pending_for(<subtask-id>, channel)` to collect all unread messages.
+   - Review the pending messages and make a ruling decision.
+   - For each pending message, call `resolve_message(channel, seq, resolved_by="planner", resolution="<your decision>")`.
+   - If any sub-task needs re-dispatch with the resolution: spawn a new Agent call
+     with the resolution injected into its context.
+4. If `unread_count` is 0 or conversations are within deadline, do nothing —
+   sub-tasks are coordinating on their own.
 
-1. **Spawning is blocking**: When you call the Agent tool with `run_in_background: true`,
-   the tool **will not return** until the spawned agent terminates. The return value
-   IS the agent's final response block (AGENT: ..., STATUS: ..., OUTPUT: ...).
-   
-2. **Therefore**: After you spawn a sub-task, **stop all other activity** for that
-   sub-task. Do not read its worktree, do not run tests in its directory, do not
-   check `git status`. Wait for the Agent tool call to complete.
-
-3. **Only after the Agent tool returns**: Read the final STATUS from the response.
-   - If STATUS: DONE → proceed to Phase 6 for that sub-task.
-   - If STATUS: QUESTIONS → answer from spec/context, then spawn a **new** Agent
-     call with the answer (do not resume the old one; spawn fresh).
-   - If STATUS: BLOCKED → escalate immediately to Orchestrator. Do not attempt
-     to fix it yourself — the Implementer's prompt already handles unblocking
-     by returning BLOCKED with a clear gap.
-
-4. **For parallel sub-tasks**: Spawn all of them in separate Agent tool calls.
-   The Agent tool handles concurrency. You must wait for **all** spawned calls
-   to complete before moving to Phase 6 for any of them.
-
-5. **Explicitly forbidden**:
-   - Reading any file inside `.worktrees/<subtask-id>/` before the Agent call
-     for that sub-task has returned.
-   - Running `cargo check`, `npm test`, or any build command inside a worktree
-     before its Agent call returns.
-   - Invoking a Reviewer on a sub-task whose Agent call has not yet returned.
-
-If you find yourself wanting to "check on" a sub-task, **stop** — you have not
-waited long enough. The Agent tool will tell you when it's done.
+**Deadline**: 600 seconds (10 minutes) total for all sub-tasks. If sub-tasks are
+still running past the deadline, check channels, resolve any pending messages,
+and proceed to Phase 6 with whatever sub-tasks completed. Report the timeout
+in your final SUMMARY.
 
 ### Phase 6 – Per-sub-task review
 Invoke Reviewer on each completed worktree before merging using the Agent tool:

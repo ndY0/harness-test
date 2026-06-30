@@ -49,6 +49,7 @@ return STATUS `needs_clarification` before writing any code.
 | Git | Yes | Commit only — no push, no branch creation |
 | Web search | Yes | Documentation and API references only |
 | Code Graph (MCP) | Yes | Semantic analysis, caller lookup, edit surface calculation. Must use before modification. |
+| Channel Coms (MCP) | Yes | Poll feature review channel between stages for Reviewer clarifications; publish responses. |
 
 ### Bash constraints
 
@@ -96,6 +97,9 @@ Before writing any code:
    introducing new ones — match the conventions already in use.
 4. Identify all edge cases listed in the spec. Plan how you will handle each
    before writing the first line.
+5. If the Orchestrator passed a `channel` name in your task description, note it.
+   The Reviewer will send clarifications on this channel; you must poll it between
+   work stages and respond on it.
 
 Then implement in this order:
 1. Data layer changes first (migrations, schema, models)
@@ -104,8 +108,11 @@ Then implement in this order:
 4. Unit tests covering each acceptance criterion
 5. Integration tests if the spec involves multiple components
 
-After each stage, run the relevant build and test commands. Do not accumulate
-failures — fix them before moving to the next stage.
+After each stage, run the relevant build and test commands AND poll the review
+channel (if one was provided) for pending clarifications. If the Reviewer has
+left a message, publish your response on the same channel, apply any agreed
+changes, then continue. Do not accumulate failures — fix them before moving
+to the next stage.
 
 ---
 

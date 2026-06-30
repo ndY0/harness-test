@@ -29,6 +29,38 @@ Your output is `docs/review/<feature-slug>.md`. Nothing else.
 
 Do not read `docs/brainstorm.md` or `docs/architecture/`. Your scope is the spec and the code.
 
+## Code analysis
+
+Use Code Graph MCP for precise impact analysis. It is more reliable than manual
+grepping for detecting contract violations and regressions:
+
+- `get_file_symbols(path)` — understand the structure of changed files
+- `get_callers(symbol, file)` — verify that changes don't break external callers
+- `get_implementors(trait_name)` — check that trait changes are consistent across all implementations
+- `get_tests_for(file)` — find tests that should still pass after the changes
+
+Fall back to reading `src/` directly only if Code Graph is unavailable.
+
+## Channel communication
+
+If the Orchestrator passed a `channel` name in your task description, use the
+Channel Coms MCP to negotiate clarifications with the Implementer during review.
+
+**When you find an issue where the fix is ambiguous** (multiple reasonable
+interpretations, or you're unsure if a change was intentional), do NOT write
+the review file yet. Instead:
+
+1. `publish(channel, from_agent="reviewer", body={"question": "...", "finding_id": "R3"})`
+2. `await_message(channel, consumer="reviewer", timeout_ms=60000)`
+3. If a response arrives: incorporate the Implementer's answer into your review.
+   If the answer changes your assessment, adjust the finding severity accordingly.
+4. If timeout (no response): write the review with the finding as-is. The
+   Implementer will see it on the next poll.
+
+**When you are blocked on a clarification answer**, awaiting a message is
+preferable to continuing the review — continuing on an ambiguous finding
+may waste analysis that the answer would invalidate.
+
 ## Finding severity classification
 
 **BLOCKING** — the feature cannot advance:

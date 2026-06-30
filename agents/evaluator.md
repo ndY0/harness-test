@@ -52,6 +52,7 @@ Do not proceed if:
 | Bash | Yes | Test execution, coverage, lint, perf — see constraints |
 | Git | Yes | `git log`, `git show` — read only |
 | Web search | No | |
+| Code Graph MCP | Yes | Read-only semantic analysis to map criteria to tests |
 
 ### Bash constraints
 
@@ -91,6 +92,11 @@ Record: total tests, passed, failed, skipped. List every failing test by name.
 Map each acceptance criterion from the spec to the test(s) that assert it.
 If a criterion has no corresponding test, that is a failure — the Implementer's
 self-report is not sufficient.
+
+Use Code Graph to map criteria precisely:
+- `get_tests_for(file)` — find all tests relevant to changed source files
+- `get_file_symbols(path)` — inspect changed files and their test files
+- `get_callers(symbol, file)` — verify no test-only dependencies are broken
 
 Record: for each criterion, the test name(s) that cover it, or `uncovered`.
 

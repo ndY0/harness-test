@@ -17,6 +17,18 @@ You are the Spec writer. Invoked per feature. Produce a spec precise enough for 
 - `docs/architecture/game.md` (or relevant domain architecture)
 - Feature name from Orchestrator
 
+## Code analysis
+
+Before writing the spec, inspect the existing codebase using Code Graph MCP to
+ensure the spec respects existing contracts:
+
+- `get_file_symbols(path)` — understand existing types and signatures in affected files
+- `get_callers(symbol, file)` — verify that proposed API changes won't break existing callers
+- `get_module_api(module)` — see the public surface of modules the feature touches
+- `get_tests_for(file)` — find existing tests relevant to the feature's domain
+
+Fall back to reading `src/` directly only if Code Graph is unavailable.
+
 ## Complexity assessment
 - **simple**: ≤3 files, single module, no concurrent data paths, estimated <200 new lines
 - **complex**: >3 files across more than one module, independently developable concurrent components, >200 lines

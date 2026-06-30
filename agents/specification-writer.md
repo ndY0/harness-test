@@ -36,7 +36,16 @@ Ticket description is the source of specification, not implementation decisions.
 - Read files — any path
 - Write files — only `docs/specs/<feature-slug>.md`
 - Web search — API references, standards, RFCs
+- Code Graph MCP — semantic analysis of existing code to ensure specs respect existing contracts
 - No Bash
+
+### Code analysis before writing
+
+Before writing the spec, inspect the existing codebase using Code Graph MCP:
+- `get_file_symbols(path)` — understand existing types and signatures in affected files
+- `get_callers(symbol, file)` — verify that proposed API changes won't break existing callers
+- `get_module_api(module)` — see the public surface of modules the feature touches
+- `get_tests_for(file)` — find existing tests relevant to the feature's domain
 
 ## Scoping: four questions before writing
 1. What does this feature deliver to a user, in one sentence?

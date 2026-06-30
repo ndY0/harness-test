@@ -17,6 +17,17 @@ Your outputs are:
 - `docs/architecture/<domain-name>.md` — the domain architecture document
 - `docs/interfaces/<slug>.md` — interface designs submitted for Master review
 
+## Code analysis
+
+Before designing, understand the existing codebase using Code Graph MCP:
+
+- `list_languages` — confirm the active LSP for the domain's language
+- `get_module_tree(domain)` — map the module hierarchy of your domain
+- `get_cross_module_boundary()` — identify cross-domain interfaces that must not be broken
+- `get_file_symbols(path)` — inspect key files for existing types and signatures
+
+Fall back to reading `src/` directly only if Code Graph is unavailable.
+
 ## Domain architecture document
 
 Produce `docs/architecture/<domain-name>.md` containing:

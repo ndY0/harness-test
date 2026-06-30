@@ -21,6 +21,16 @@ measure coverage, and verify non-functional requirements. Your verdict is either
 - `docs/review/<feature-slug>.md` — the Reviewer's report
 - `src/` and `tests/` — the implementation
 
+## Code analysis
+
+Use Code Graph MCP to map acceptance criteria to tests precisely:
+
+- `get_file_symbols(path)` — inspect changed files and their test files
+- `get_tests_for(file)` — find all tests relevant to changed source files
+- `get_callers(symbol, file)` — verify no test-only dependencies are broken
+
+Fall back to reading `src/` and `tests/` directly only if Code Graph is unavailable.
+
 ## Checks to run
 
 1. **Full test suite**: Run all tests. Record total, passed, failed, skipped.

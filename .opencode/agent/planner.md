@@ -26,17 +26,49 @@ Max depth: **2**. At depth 2, treat all complex sub-tasks as `simple` and dispat
 - Bash: git worktree, merge only — **never** for spawning sub-agents
 - Task tool: spawn `implementer` and `reviewer` subagents — use the task tool with the subagent_type set to the agent name
 - No: web search, direct `src/` or `docs/specs/` writes
+- Code Graph MCP: Primary tool for decomposition, coupling analysis, and boundary detection.
+- Channel Coms MCP: Monitor sub-task channels, collect pending messages, arbitrate timeouts.
 
 ## Workflow phases
 
 ### Phase 1 – Understand
 1. Read feature spec fully.
-2. Read referenced architecture docs.
-3. Identify the **write set**: all files the feature will touch.
+
+2. Call `list_languages` to verify the active LSP.
+
+   Call `get_module_tree(domain)` on the primary domain(s) affected to map the module hierarchy.
+
+   Call `get_coupling_hotspots()` to identify the most interdependent files.
+   These are your risk zones — decompose carefully around them.
+
+   Call `get_cross_module_boundary()` to list all cross-domain interfaces
+   (e.g., API boundaries, shared traits). Any change crossing these boundaries
+   must align with the Architect tier rules.
+
+3. Read referenced architecture docs.
+4. Identify the **write set**: all files the feature will touch (be conservative).
 
 ### Phase 2 – Decompose
-Partition into sub-tasks, each with a **disjoint write set** (no file written by more than one).
+Partition into sub-tasks, each with a **disjoint write set** (no file written by more than one). If impossible: sequence or reduce sub-task count.
+
+Validate disjointness using Code Graph:
+
+    For each proposed sub-task's write set, query `get_callers()` for entry points
+    it exposes and `get_callees()` for functions it consumes.
+
+    If Sub-task A calls functions from a file that Sub-task B will modify, they
+    are not disjoint. Merge them into a single sub-task or sequence with a hard
+    dependency (`depends_on`).
+
+    If Sub-task A and B touch the same trait's implementors (discovered via
+    `get_implementors(trait)`), they are not independent — group them.
+
 Max **6 sub-tasks** per Planner.
+
+**Channel assignment**: For sub-tasks that share interface contracts (e.g. one defines
+a trait, another consumes it), assign them a shared channel name:
+`planner:<feature-id>:<purpose>`. Record this in the manifest `channel` field.
+Sub-tasks with no shared contracts get no channel.
 
 Write a manifest for each sub-task at `docs/plans/<feature-id>/<subtask-id>.md` with front-matter:
 ```
@@ -46,6 +78,7 @@ subtask: <subtask-id>
 title: "short description"
 write_set: [list of files]
 depends_on: []
+channel: <channel-name or "none">
 complexity: simple
 planner_depth: <depth+1>
 ---
@@ -58,12 +91,34 @@ Write all manifests before any dispatch.
 For each sub-task: `git worktree add .worktrees/<subtask-id> -b feat/<subtask-id>`
 
 ### Phase 4 – Dispatch
-**Independent sub-tasks**: launch all in parallel using the Task tool. For each sub-task, spawn the `implementer` agent (or `planner` at depth < 2) with the manifest path and worktree path. Use `run_in_background: true` (or parallel tool calls) for true parallelism.
+**Independent sub-tasks**: launch all in parallel using the Task tool. For each sub-task, spawn the `implementer` agent (or `planner` at depth < 2) with the manifest path and worktree path. Include in the task description:
+- The channel name (from the manifest `channel` field) if this sub-task shares contracts with siblings
+- The instruction: "Poll this channel between work stages for messages from sibling sub-tasks. If a sibling requests a change to a shared interface, respond on the channel and apply the agreed change."
+Use `run_in_background: true` (or parallel tool calls) for true parallelism.
 
 **Sequenced sub-tasks**: wait for dependency to complete, then spawn dependent.
 
-### Phase 5 – Supervise
-Wait for ALL sub-task agents to complete. Do not poll worktrees.
+### Phase 5 – Supervise with channels
+
+Wait for ALL sub-task agents to complete. While waiting, periodically monitor
+each active channel using Channel Coms MCP:
+
+1. Call `unread_count(channel)` on each sub-task channel.
+2. If any channel has `unread_count > 0` and `conversation_age(channel)` exceeds
+   **300 seconds** (5 minutes), the conversation has timed out.
+3. **Timeout arbitration**:
+   - Call `pending_for(<subtask-id>, channel)` to collect all unread messages.
+   - Review the pending messages and make a ruling decision.
+   - For each pending message, call `resolve_message(channel, seq, resolved_by="planner", resolution="<your decision>")`.
+   - If any sub-task needs re-dispatch with the resolution: spawn a new Agent call
+     with the resolution injected into its context.
+4. If `unread_count` is 0 or conversations are within deadline, do nothing —
+   sub-tasks are coordinating on their own.
+
+**Deadline**: 600 seconds (10 minutes) total for all sub-tasks. If sub-tasks are
+still running past the deadline, check channels, resolve any pending messages,
+and proceed to Phase 6 with whatever sub-tasks completed. Report the timeout
+in your final SUMMARY.
 
 ### Phase 6 – Per-sub-task review
 Spawn the `reviewer` agent on each completed worktree before merging. Merge only after `verdict: approved`.

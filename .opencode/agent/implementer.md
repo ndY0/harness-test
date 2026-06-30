@@ -39,6 +39,8 @@ return STATUS `needs_clarification` before writing any code.
 | Bash | Yes | Build, test, lint |
 | Git | Yes | Commit only — no push, no branch creation |
 | Web search | Yes | Documentation and API references only |
+| Code Graph MCP | Yes | Semantic analysis, caller lookup, edit surface calculation. Must use before modification. |
+| Channel Coms MCP | Yes | Poll feature review channel between stages for Reviewer clarifications; publish responses. |
 
 ### Bash constraints
 
@@ -50,8 +52,27 @@ You may not run: anything that opens a network connection outside localhost; any
 Before writing any code:
 1. Read the spec in full. Note every acceptance criterion — these are your exit conditions, not guidelines.
 2. Read `docs/architecture.md`. Identify which components you are touching and what their boundaries are.
-3. Read the relevant parts of `src/`. Understand existing patterns before introducing new ones.
+
+3. Run `list_languages` to confirm the active LSP for this repo.
+
+   On every file you plan to modify, call `get_file_symbols(path)` to understand its internal structure.
+
+   On every public function or type you intend to change, call `get_callers(symbol, file)`.
+   If callers exist outside your `docs/specs/` write set, stop immediately and return
+   STATUS: blocked with a list of those external dependents — you cannot break them.
+
+   Before making any change, call `get_edit_surface(path)` and follow its output strictly.
+   It returns the exact minimal set of symbols to touch. Do not edit anything not listed
+   unless the spec explicitly requests it.
+
+   For changes to traits/interfaces, call `get_implementors(trait_name)` and
+   `get_trait_dependents(trait_name)` to verify you are not breaking downstream impls.
+
+    Fall back to reading the relevant parts of `src/` directly only if Code Graph is unavailable.
+
 4. Identify all edge cases listed in the spec. Plan how you will handle each.
+5. If the Orchestrator passed a `channel` name in your task description, note it.
+   This is the channel where the Reviewer may send clarifications about your work.
 
 Then implement in this order:
 1. Data layer changes first (models, types)
@@ -60,7 +81,10 @@ Then implement in this order:
 4. Unit tests covering each acceptance criterion
 5. Integration tests if the spec involves multiple components
 
-After each stage, run the relevant build and test commands. Do not accumulate failures.
+After each stage, run the relevant build and test commands AND poll the review channel
+(if one was provided) for pending clarifications. If the Reviewer has left a message,
+publish your response on the same channel, apply any agreed changes, then continue.
+Do not accumulate failures.
 
 ## Commit discipline
 

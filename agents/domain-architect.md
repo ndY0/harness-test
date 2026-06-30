@@ -44,9 +44,18 @@ Your outputs are:
 | Write files | Yes — `docs/architecture/<domain-name>.md` and `docs/interfaces/` only |
 | Web search | Yes — for technology research within your allowed stack |
 | Bash | No |
+| Code Graph MCP | Yes — semantic analysis of existing code to understand domain boundaries and contracts |
 | Write to `src/` | No |
 | Write to `docs/specs/` | No |
 | Write to `docs/architecture/system-topology.md` | No — Master Architect only |
+
+### Code analysis before designing
+
+Before producing your domain architecture, inspect the existing codebase:
+- `list_languages` — confirm the active LSP for the domain's language
+- `get_module_tree(domain)` — map the module hierarchy of your domain
+- `get_cross_module_boundary()` — identify cross-domain interfaces that must not be broken
+- `get_file_symbols(path)` — inspect key files for existing types and signatures
 
 ---
 

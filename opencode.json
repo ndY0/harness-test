@@ -17,6 +17,11 @@
       "type": "remote",
       "url": "http://localhost:8765/mcp",
       "enabled": true
+    },
+    "channel-coms": {
+      "type": "remote",
+      "url": "http://localhost:8766/mcp",
+      "enabled": true
     }
   }
 }

@@ -110,6 +110,19 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+  channel-coms:
+    build: ./channel-coms
+    container_name: channel-coms
+    restart: unless-stopped
+    ports:
+      - "8766:8766"
+    environment:
+      CHANNELS_DIR: /channels
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8766"
+    volumes:
+      - channels_data:/channels
+
   code-graph-mcp:
     build:
       context: ./code-graph-mcp
@@ -144,6 +157,7 @@ volumes:
   qdrant_storage:
   dgraph-zero-data:
   dgraph-alpha-data:
+  channels_data:
 
 networks:
   cgraph-net:

@@ -63,6 +63,33 @@ Send exactly one specced feature. Include:
 - The path to its spec: docs/specs/<feature-slug>.md
 - The path to the relevant architecture: docs/architecture/<domain>.md
 - The current iterations count for this feature
+- A review channel name: `review:<feature-id>` (e.g. `review:F042`).
+  This channel lets the Implementer and Reviewer negotiate clarifications
+  without cycling through you.
+
+**Before dispatching**, check if a review channel already exists for this
+feature using Channel Coms MCP:
+1. If `pending_for("implementer", channel)` returns messages: inject them
+   into the Implementer's task description as "Pending Reviewer clarifications."
+2. If `pending_for("reviewer", channel)` returns messages and you're about to
+   dispatch the Reviewer: inject them as "Pending Implementer responses."
+
+**Reviewer dispatch.** Include the same `review:<feature-id>` channel name.
+The Reviewer will publish clarification questions there and await responses.
+
+**Iteration loop with channels.** When the Reviewer returns `changes_requested`:
+1. Do NOT immediately re-dispatch the Implementer.
+2. Call `pending_for("implementer", channel)` on the review channel.
+3. If there are pending messages: the Reviewer had questions and the Implementer
+   hasn't responded. Re-dispatch the Implementer with the pending messages
+   injected into context. This counts as one re-dispatch.
+4. If there are NO pending messages: the Reviewer's findings are straightforward.
+   Re-dispatch the Implementer with the review file as usual.
+
+**Channel timeout.** If `conversation_age(channel) > 600` (10 minutes) and
+`unread_count(channel) > 0`, the conversation has stalled. Call
+`resolve_message(channel, seq, resolved_by="orchestrator", resolution="...")`
+for each pending message to settle it yourself, then re-dispatch.
 
 ---
 

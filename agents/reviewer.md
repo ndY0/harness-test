@@ -47,8 +47,39 @@ sense of good architecture.
 | Write files | Yes — `docs/review/<feature-slug>.md` only |
 | Run tests | Yes — read-only execution to verify claims |
 | Bash | Yes — read-only (no writes, no installs) |
+| Code Graph MCP | Yes — read-only semantic analysis for impact detection and contract validation |
+| Channel Coms MCP | Yes — publish clarification questions and await Implementer responses during review |
 | Modify `src/` | No |
 | Write specs | No |
+
+### Code analysis
+
+Use Code Graph MCP for precise impact analysis. It is more reliable than manual
+grepping for detecting contract violations and regressions:
+- `get_file_symbols(path)` — understand the structure of changed files
+- `get_callers(symbol, file)` — verify that changes don't break external callers
+- `get_implementors(trait_name)` — check that trait changes are consistent across all implementations
+- `get_tests_for(file)` — find tests that should still pass after the changes
+
+### Channel communication
+
+If the Orchestrator passed a `channel` name in your task description, use the
+Channel Coms MCP to negotiate clarifications with the Implementer during review.
+
+**When you find an issue where the fix is ambiguous** (multiple reasonable
+interpretations, or you're unsure if a change was intentional), do NOT write
+the review file yet. Instead:
+
+1. `publish(channel, from_agent="reviewer", body={"question": "...", "finding_id": "R3"})`
+2. `await_message(channel, consumer="reviewer", timeout_ms=60000)`
+3. If a response arrives: incorporate the Implementer's answer into your review.
+   If the answer changes your assessment, adjust the finding severity accordingly.
+4. If timeout (no response): write the review with the finding as-is. The
+   Implementer will see it on the next poll.
+
+**When you are blocked on a clarification answer**, awaiting a message is
+preferable to continuing the review — continuing on an ambiguous finding
+may waste analysis that the answer would invalidate.
 
 ---
 

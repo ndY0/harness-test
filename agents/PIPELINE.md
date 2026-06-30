@@ -167,8 +167,7 @@ read files.
 **Purpose**: Resolve dependencies, inspect call hierarchies, find type usages,
 and calculate safe edit surfaces before modifying code.
 
-**Allowed Agents**: Planner, Implementer, Reviewer (read‑only for all; no
-write/modify operations on the codebase itself).
+**Allowed Agents**: Planner, Implementer, Domain Architect, Spec Writer, Reviewer, Evaluator (read‑only for all; no write/modify operations on the codebase itself).
 
 **Key tools (grouped)**:
 
